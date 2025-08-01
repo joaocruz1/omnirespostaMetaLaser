@@ -217,7 +217,7 @@ export default function DashboardPage() {
                   onRefresh={loadChats}
                 />
               </div>
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 min-w-0">
                 <ChatWindow chat={selectedChat} onChatUpdate={loadChats} />
               </div>
             </div>
