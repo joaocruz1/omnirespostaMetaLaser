@@ -8,9 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/components/auth-provider"
-import { Send, Paperclip, ImageIcon, UserCheck, MoreVertical, Archive, UserX } from "lucide-react"
+import { Send, Paperclip, UserCheck, MoreVertical, Archive, UserX, MessageSquare } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 
 interface Chat {
@@ -243,10 +242,9 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
         </div>
       </CardHeader>
 
-      {/* --- CORREÇÃO PRINCIPAL AQUI --- */}
-      {/* O CardContent agora engloba a área de mensagens e a área de input */}
-      {/* A ScrollArea ocupa o espaço flexível e o input fica fixo no final */}
+      {/* --- CORREÇÃO PRINCIPAL APLICADA AQUI --- */}
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+        {/* Área de Mensagens com Rolagem */}
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.map((message) => (
@@ -257,7 +255,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1 text-right">{message.timestamp}</p>
+                  <p className="text-xs opacity-70 mt-1 text-right">{new Date(message.timestamp).toLocaleTimeString()}</p>
                 </div>
               </div>
             ))}
@@ -265,6 +263,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
           </div>
         </ScrollArea>
 
+        {/* Área de Input de Mensagem */}
         <div className="border-t p-4 bg-background">
           <div className="flex items-center space-x-2">
             <Textarea
