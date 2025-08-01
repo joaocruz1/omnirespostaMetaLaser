@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 const mockChats = [
   {
     id: "1",
-    contact: "+55 11 99999-9999",
+    contact: "+55 35 99747-8472",
     lastMessage: "Olá, gostaria de informações sobre os produtos",
     timestamp: "10:30",
     unreadCount: 2,

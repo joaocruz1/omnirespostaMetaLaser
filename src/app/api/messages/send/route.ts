@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const { chatId, message, type } = await request.json()
 
     // Extrair número do telefone do chatId (em produção, buscar do banco)
-    const phoneNumber = "5511999999999" // Mock
+    const phoneNumber = "5535997478472" // Mock
 
     // Enviar mensagem via Evolution API
     const evolutionResponse = await fetch(`${EVOLUTION_API_BASE_URL}/message/sendText/${INSTANCE_NAME}`, {
