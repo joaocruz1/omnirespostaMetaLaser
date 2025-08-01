@@ -43,6 +43,47 @@ export default function DashboardPage() {
 
     loadChats()
     loadStats()
+
+    // --- INÍCIO DA LÓGICA WEBSOCKET ---
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}`; // Conecta ao mesmo host
+
+    // Infelizmente, conectar diretamente a uma API Route não funciona de forma simples.
+    // A lógica de upgrade precisaria de um servidor customizado.
+    // O ideal seria ter a lógica do WebSocket Server no servidor principal.
+
+    // Em um cenário de desenvolvimento, podemos nos comunicar via uma API que lê um "cache"
+    // ou, para uma solução real, usar um serviço de WebSocket.
+
+    // Por ora, vamos simular o efeito recarregando os chats periodicamente,
+    // mas o ideal seria o WebSocket que implementamos no backend.
+    // A limitação está na arquitetura serverless do Next.js.
+
+    // A implementação correta do WebSocket no cliente seria:
+    // const socket = new WebSocket(wsUrl);
+    //
+    // socket.onopen = () => console.log("WebSocket conectado!");
+    // socket.onmessage = (event) => {
+    //   const message = JSON.parse(event.data);
+    //   if (message.event === 'new_message') {
+    //     console.log('Nova mensagem recebida via WebSocket, atualizando chats...');
+    //     loadChats(); // Recarrega a lista de chats para simplicidade
+    //     loadStats();
+    //   }
+    // };
+    //
+    // return () => {
+    //   socket.close(); // Fecha a conexão ao desmontar o componente
+    // };
+
+    // SOLUÇÃO PALIATIVA (Polling) se o WebSocket for complexo de configurar:
+    const interval = setInterval(() => {
+        loadChats();
+    }, 5000); // Recarrega os chats a cada 5 segundos
+
+    return () => clearInterval(interval);
+    // --- FIM DA LÓGICA ---
+
   }, [user, router])
 
   const loadChats = async () => {

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 interface Chat {
   id: string
   contact: string
-  lastMessage: string
+  lastMessage: any // Alterado para 'any' para refletir a realidade dos dados recebidos
   timestamp: string
   unreadCount: number
   assignedTo?: string
@@ -31,12 +31,16 @@ export function ChatList({ chats, selectedChat, onSelectChat, onRefresh }: ChatL
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
 
   const filteredChats = chats.filter((chat) => {
-    const matchesSearch =
-      chat.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filter === "all" || chat.status === filter
-    return matchesSearch && matchesFilter
-  })
+    const contactMatch =
+      typeof chat.contact === 'string' && chat.contact.toLowerCase().includes(searchTerm.toLowerCase());
+    const messageMatch =
+      typeof chat.lastMessage === 'string' && chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesSearch = contactMatch || messageMatch;
+    const matchesFilter = filter === "all" || chat.status === filter;
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -129,7 +133,7 @@ export function ChatList({ chats, selectedChat, onSelectChat, onRefresh }: ChatL
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground truncate mt-1">{chat.lastMessage}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-1">{typeof chat.lastMessage === 'string' ? chat.lastMessage : '[Mídia]'}</p>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
