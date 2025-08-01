@@ -8,6 +8,20 @@ export async function POST(request: NextRequest) {
 
     // Processar diferentes tipos de eventos
     switch (webhookData.event) {
+      // Eventos da Evolution API
+      case "messages.upsert":
+        await handleNewMessage(webhookData)
+        break
+      
+      case "chats.update":
+        console.log("Chat update event received:", webhookData.data)
+        break
+
+      case "connection.update":
+        await handleConnectionUpdate(webhookData)
+        break
+
+      // Mantendo compatibilidade com eventos antigos (opcional)
       case "MESSAGE":
         await handleNewMessage(webhookData)
         break
@@ -17,6 +31,7 @@ export async function POST(request: NextRequest) {
       case "CONNECTION":
         await handleConnectionUpdate(webhookData)
         break
+
       default:
         console.log("Unknown webhook event:", webhookData.event)
     }
@@ -30,7 +45,7 @@ export async function POST(request: NextRequest) {
 
 async function handleNewMessage(data: any) {
   // Em produção, salvar mensagem no banco e notificar usuários via WebSocket
-  console.log("New message received:", data)
+  console.log("New message received from handler:", data.data)
 
   // Aqui você pode:
   // 1. Salvar a mensagem no banco de dados
