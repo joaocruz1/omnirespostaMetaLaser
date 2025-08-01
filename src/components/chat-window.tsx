@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/components/auth-provider"
 import { Send, Paperclip, ImageIcon, UserCheck, MoreVertical, Archive, UserX } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MessageSquare } from "lucide-react" // Declare MessageSquare here
+import { MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 
 interface Chat {
@@ -50,6 +50,8 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
     if (chat) {
       loadMessages()
       loadUsers()
+    } else {
+      setMessages([]) // Limpa as mensagens quando nenhum chat está selecionado
     }
   }, [chat])
 
@@ -177,7 +179,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
 
   if (!chat) {
     return (
-      <Card className="h-full">
+      <Card className="h-full flex flex-col">
         <CardContent className="flex items-center justify-center h-full">
           <div className="text-center text-muted-foreground">
             <MessageSquare className="h-12 w-12 mx-auto mb-4" />
@@ -190,7 +192,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="flex-shrink-0">
+      <CardHeader className="flex-shrink-0 border-b">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">{chat.contact}</CardTitle>
@@ -218,7 +220,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="icon">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -241,7 +243,10 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
+      {/* --- CORREÇÃO PRINCIPAL AQUI --- */}
+      {/* O CardContent agora engloba a área de mensagens e a área de input */}
+      {/* A ScrollArea ocupa o espaço flexível e o input fica fixo no final */}
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.map((message) => (
@@ -251,8 +256,8 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
                     message.sender === "agent" ? "bg-primary text-primary-foreground" : "bg-muted"
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1">{message.timestamp}</p>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-xs opacity-70 mt-1 text-right">{message.timestamp}</p>
                 </div>
               </div>
             ))}
@@ -260,31 +265,26 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
           </div>
         </ScrollArea>
 
-        <div className="border-t p-4">
-          <div className="flex space-x-2">
-            <div className="flex-1">
-              <Textarea
-                placeholder="Digite sua mensagem..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    sendMessage()
-                  }
-                }}
-                className="min-h-[60px] resize-none"
-              />
-            </div>
-            <div className="flex flex-col space-y-2">
-              <Button variant="outline" size="sm">
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm">
-                <ImageIcon className="h-4 w-4" /> {/* Updated Image to ImageIcon */}
-              </Button>
-              <Button onClick={sendMessage} disabled={loading || !newMessage.trim()} size="sm">
+        <div className="border-t p-4 bg-background">
+          <div className="flex items-center space-x-2">
+            <Textarea
+              placeholder="Digite sua mensagem..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage()
+                }
+              }}
+              className="min-h-[60px] resize-none"
+            />
+            <div className="flex flex-col space-y-1">
+               <Button onClick={sendMessage} disabled={loading || !newMessage.trim()} size="icon">
                 <Send className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon">
+                <Paperclip className="h-4 w-4" />
               </Button>
             </div>
           </div>
