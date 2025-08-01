@@ -9,6 +9,7 @@ const INSTANCE_NAME = process.env.INSTANCE_NAME || "joaoomni"
 export async function GET(request: NextRequest) {
   try {
     const response = await fetch(`${EVOLUTION_API_BASE_URL}/chat/findChats/${INSTANCE_NAME}`, {
+      method: "POST",
       headers: {
         "apikey": EVOLUTION_API_KEY || ""
       }
