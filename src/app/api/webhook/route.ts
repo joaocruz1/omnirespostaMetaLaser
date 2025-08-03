@@ -5,10 +5,6 @@ import { broadcast } from '@/lib/websocket';
 export async function POST(request: NextRequest) {
   try {
     const webhookData = await request.json()
-
-    console.log("Webhook received:", webhookData)
-
-
     // Processar diferentes tipos de eventos
     switch (webhookData.event) {
       // --- ALTERAÇÃO AQUI ---
@@ -19,7 +15,6 @@ export async function POST(request: NextRequest) {
         break
       
       case "chats.update":
-        console.log("Chat update event received:", webhookData.data)
         broadcast({ event: 'chat_update', data: webhookData.data });
         break
 
@@ -65,6 +60,6 @@ async function handleStatusUpdate(data: any) {
 }
 
 async function handleConnectionUpdate(data: any) {
-  console.log("Connection update:", data)
+  
   // Atualizar status da conexão da instância
 }

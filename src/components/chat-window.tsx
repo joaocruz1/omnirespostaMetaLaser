@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/components/auth-provider"
-import { Send, Paperclip, UserCheck, MoreVertical, Archive, UserX, MessageSquare } from "lucide-react"
+import { Send, Paperclip, UserCheck, MoreVertical, Archive, UserX, MessageSquare, User, Circle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface Chat {
   id: string
@@ -42,7 +43,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  
+
   const { user } = useAuth()
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
       loadMessages()
       loadUsers()
     } else {
-      setMessages([]) // Limpa as mensagens quando nenhum chat está selecionado
+      setMessages([])
     }
   }, [chat])
 
@@ -176,13 +177,42 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
     }
   }
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+      case "waiting":
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+      case "closed":
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "active":
+        return "Ativo"
+      case "waiting":
+        return "Aguardando"
+      case "closed":
+        return "Finalizado"
+      default:
+        return "Desconhecido"
+    }
+  }
+
   if (!chat) {
     return (
-      <Card className="h-full flex flex-col">
+      <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
         <CardContent className="flex items-center justify-center h-full">
           <div className="text-center text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-4" />
-            <p>Selecione uma conversa para começar</p>
+            <div className="w-16 h-16 gradient-purple-light rounded-xl flex items-center justify-center mx-auto mb-3">
+              <MessageSquare className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h3 className="text-base font-semibold mb-1">Selecione uma conversa</h3>
+            <p className="text-sm">Escolha uma conversa da lista para começar</p>
           </div>
         </CardContent>
       </Card>
@@ -190,27 +220,49 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="flex-shrink-0 border-b">
+    <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
+      <CardHeader className="flex-shrink-0 border-b border-purple-200/30 dark:border-purple-800/30 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30 px-4 py-3">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">{chat.contact}</CardTitle>
-            <div className="flex items-center space-x-2 mt-1">
-              <Badge variant={chat.status === "active" ? "default" : "secondary"}>
-                {chat.status === "active" ? "Ativo" : chat.status === "waiting" ? "Aguardando" : "Finalizado"}
-              </Badge>
-              {chat.assignedTo && <Badge variant="outline">Atribuído a: {chat.assignedTo}</Badge>}
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center shadow-sm">
+              <User className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">{chat.contact}</CardTitle>
+              <div className="flex items-center space-x-2 mt-0.5">
+                <Badge variant="outline" className={cn("text-xs px-2 py-0 h-5", getStatusColor(chat.status))}>
+                  <Circle
+                    className={cn(
+                      "w-1.5 h-1.5 fill-current mr-1",
+                      chat.status === "active"
+                        ? "text-green-500"
+                        : chat.status === "waiting"
+                          ? "text-yellow-500"
+                          : "text-gray-400",
+                    )}
+                  />
+                  {getStatusText(chat.status)}
+                </Badge>
+                {chat.assignedTo && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
+                  >
+                    {chat.assignedTo}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
             <Select onValueChange={transferChat}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-32 h-8 text-xs border-purple-200 dark:border-purple-800">
                 <SelectValue placeholder="Transferir" />
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
+                  <SelectItem key={u.id} value={u.id} className="text-xs">
                     {u.name}
                   </SelectItem>
                 ))}
@@ -219,21 +271,25 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreVertical className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                >
+                  <MoreVertical className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => updateChatStatus("active")}>
-                  <UserCheck className="h-4 w-4 mr-2" />
+                <DropdownMenuItem onClick={() => updateChatStatus("active")} className="text-xs">
+                  <UserCheck className="h-3 w-3 mr-2" />
                   Marcar como Ativo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => updateChatStatus("waiting")}>
-                  <UserX className="h-4 w-4 mr-2" />
+                <DropdownMenuItem onClick={() => updateChatStatus("waiting")} className="text-xs">
+                  <UserX className="h-3 w-3 mr-2" />
                   Marcar como Aguardando
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => updateChatStatus("closed")}>
-                  <Archive className="h-4 w-4 mr-2" />
+                <DropdownMenuItem onClick={() => updateChatStatus("closed")} className="text-xs">
+                  <Archive className="h-3 w-3 mr-2" />
                   Finalizar Conversa
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -242,48 +298,73 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
         </div>
       </CardHeader>
 
-      {/* --- CORREÇÃO PRINCIPAL APLICADA AQUI --- */}
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-        {/* Área de Mensagens com Rolagem */}
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.sender === "agent" ? "justify-end" : "justify-start"}`}>
+        {/* Área de Mensagens com Rolagem CORRIGIDA */}
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full scrollbar-thin">
+            <div className="p-4 space-y-3">
+              {messages.map((message) => (
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.sender === "agent" ? "bg-primary text-primary-foreground" : "bg-muted"
-                  }`}
+                  key={message.id}
+                  className={`flex ${message.sender === "agent" ? "justify-end" : "justify-start"}`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1 text-right">{new Date(message.timestamp).toLocaleTimeString()}</p>
+                  <div
+                    className={cn(
+                      "max-w-xs lg:max-w-md px-3 py-2 rounded-lg shadow-sm text-sm",
+                      message.sender === "agent"
+                        ? "gradient-purple text-white shadow-purple/20"
+                        : "bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900/50",
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                    <p
+                      className={cn(
+                        "text-xs mt-1 text-right",
+                        message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
+                      )}
+                    >
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
 
         {/* Área de Input de Mensagem */}
-        <div className="border-t p-4 bg-background">
-          <div className="flex items-center space-x-2">
-            <Textarea
-              placeholder="Digite sua mensagem..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              className="min-h-[60px] resize-none"
-            />
-            <div className="flex flex-col space-y-1">
-               <Button onClick={sendMessage} disabled={loading || !newMessage.trim()} size="icon">
-                <Send className="h-4 w-4" />
+        <div className="border-t border-purple-200/30 dark:border-purple-800/30 p-4 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
+          <div className="flex items-end space-x-2">
+            <div className="flex-1">
+              <Textarea
+                placeholder="Digite sua mensagem..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
+                className="min-h-[40px] max-h-24 resize-none text-sm bg-white/80 dark:bg-gray-800/80 border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600 rounded-lg"
+              />
+            </div>
+            <div className="flex space-x-1">
+              <Button
+                onClick={sendMessage}
+                disabled={loading || !newMessage.trim()}
+                size="sm"
+                className="h-8 w-8 p-0 gradient-purple hover:opacity-90 shadow-sm"
+              >
+                <Send className="h-3 w-3" />
               </Button>
-              <Button variant="outline" size="icon">
-                <Paperclip className="h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+              >
+                <Paperclip className="h-3 w-3" />
               </Button>
             </div>
           </div>

@@ -51,10 +51,13 @@ export async function GET(
             "apikey": EVOLUTION_API_KEY || "",
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-            "jid": chatId,
-            "limit": 100 // Aumente se precisar de mais histórico
-        })
+      body: JSON.stringify({
+        "where": {
+          "key": {
+            "remoteJid": chatId
+          }
+        }
+      })
     });
     
     if (!response.ok) {
@@ -113,7 +116,6 @@ export async function GET(
       } else if (msg.message?.reactionMessage) {
         content = `[Reação: ${msg.message.reactionMessage.text}]`;
       }
-
 
       return {
         id: msg.key.id,

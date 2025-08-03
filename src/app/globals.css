@@ -45,116 +45,122 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.99 0 0); /* Fundo branco suave */
-  --foreground: oklch(0.18 0.02 260); /* Texto azulado escuro */
-  
+  --radius: 0.75rem;
+  --background: oklch(0.99 0.005 280); /* Fundo branco com leve toque roxo */
+  --foreground: oklch(0.15 0.02 280); /* Texto roxo escuro */
+
   /* Cores de superfície */
   --card: oklch(1 0 0); /* Branco puro para cards */
-  --card-foreground: oklch(0.18 0.02 260);
+  --card-foreground: oklch(0.15 0.02 280);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 260);
-  
-  /* Cores principais - Azul vibrante */
-  --primary: oklch(0.55 0.22 260); /* Azul primário */
+  --popover-foreground: oklch(0.15 0.02 280);
+
+  /* Cores principais - Roxo vibrante */
+  --primary: oklch(0.55 0.25 280); /* Roxo primário */
   --primary-foreground: oklch(0.98 0 0); /* Branco para texto */
-  
-  /* Cores secundárias - Azul mais suave */
-  --secondary: oklch(0.92 0.05 260); /* Azul claro */
-  --secondary-foreground: oklch(0.18 0.02 260);
-  
+
+  /* Cores secundárias - Roxo mais suave */
+  --secondary: oklch(0.95 0.08 280); /* Roxo muito claro */
+  --secondary-foreground: oklch(0.15 0.02 280);
+
   /* Cores neutras */
-  --muted: oklch(0.96 0 0); /* Cinza muito claro */
-  --muted-foreground: oklch(0.46 0 0); /* Cinza médio */
-  
-  /* Destaque - Azul diferente */
-  --accent: oklch(0.92 0.1 240); /* Azul esverdeado */
-  --accent-foreground: oklch(0.18 0.02 260);
-  
+  --muted: oklch(0.97 0.02 280); /* Cinza com toque roxo */
+  --muted-foreground: oklch(0.45 0.02 280); /* Cinza médio roxeado */
+
+  /* Destaque - Roxo diferente */
+  --accent: oklch(0.92 0.12 300); /* Roxo rosado */
+  --accent-foreground: oklch(0.15 0.02 280);
+
   /* Destrutivo - Vermelho */
-  --destructive: oklch(0.65 0.25 27); /* Vermelho */
+  --destructive: oklch(0.65 0.25 15); /* Vermelho */
   --destructive-foreground: oklch(0.98 0 0);
-  
+
   /* Bordas e inputs */
-  --border: oklch(0.9 0 0); /* Cinza claro */
-  --input: oklch(0.95 0 0); /* Quase branco */
-  --ring: oklch(0.55 0.22 260); /* Azul primário */
-  
-  /* Cores para gráficos - Tons de azul */
-  --chart-1: oklch(0.55 0.22 260); /* Azul primário */
-  --chart-2: oklch(0.45 0.2 240); /* Azul esverdeado */
-  --chart-3: oklch(0.65 0.18 280); /* Azul violeta */
-  --chart-4: oklch(0.5 0.15 220); /* Azul ciano */
-  --chart-5: oklch(0.6 0.2 200); /* Azul turquesa */
-  
-  /* Sidebar - Azul claro */
-  --sidebar: oklch(0.96 0.02 260); /* Azul muito claro */
-  --sidebar-foreground: oklch(0.18 0.02 260);
-  --sidebar-primary: oklch(0.55 0.22 260); /* Azul primário */
+  --border: oklch(0.92 0.02 280); /* Cinza claro roxeado */
+  --input: oklch(0.98 0.01 280); /* Quase branco */
+  --ring: oklch(0.55 0.25 280); /* Roxo primário */
+
+  /* Cores para gráficos - Tons de roxo */
+  --chart-1: oklch(0.55 0.25 280); /* Roxo primário */
+  --chart-2: oklch(0.45 0.22 300); /* Roxo rosado */
+  --chart-3: oklch(0.65 0.2 260); /* Roxo azulado */
+  --chart-4: oklch(0.5 0.18 320); /* Roxo magenta */
+  --chart-5: oklch(0.6 0.23 240); /* Roxo violeta */
+
+  /* Sidebar - Roxo claro */
+  --sidebar: oklch(0.98 0.03 280); /* Roxo muito claro */
+  --sidebar-foreground: oklch(0.15 0.02 280);
+  --sidebar-primary: oklch(0.55 0.25 280); /* Roxo primário */
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.92 0.1 240); /* Azul esverdeado */
-  --sidebar-accent-foreground: oklch(0.18 0.02 260);
-  --sidebar-border: oklch(0.9 0 0);
-  --sidebar-ring: oklch(0.55 0.22 260);
+  --sidebar-accent: oklch(0.92 0.12 300); /* Roxo rosado */
+  --sidebar-accent-foreground: oklch(0.15 0.02 280);
+  --sidebar-border: oklch(0.92 0.02 280);
+  --sidebar-ring: oklch(0.55 0.25 280);
 }
 
 .dark {
-  --background: oklch(0.12 0.02 260); /* Azul muito escuro */
-  --foreground: oklch(0.95 0.01 260); /* Branco azulado */
-  
+  --background: oklch(0.08 0.02 280); /* Roxo muito escuro */
+  --foreground: oklch(0.95 0.01 280); /* Branco roxeado */
+
   /* Cores de superfície */
-  --card: oklch(0.15 0.02 260); /* Azul escuro */
-  --card-foreground: oklch(0.95 0.01 260);
-  --popover: oklch(0.15 0.02 260);
-  --popover-foreground: oklch(0.95 0.01 260);
-  
-  /* Cores principais - Azul brilhante */
-  --primary: oklch(0.7 0.2 260); /* Azul vibrante */
-  --primary-foreground: oklch(0.12 0.02 260);
-  
+  --card: oklch(0.12 0.03 280); /* Roxo escuro */
+  --card-foreground: oklch(0.95 0.01 280);
+  --popover: oklch(0.12 0.03 280);
+  --popover-foreground: oklch(0.95 0.01 280);
+
+  /* Cores principais - Roxo brilhante */
+  --primary: oklch(0.7 0.22 280); /* Roxo vibrante */
+  --primary-foreground: oklch(0.08 0.02 280);
+
   /* Cores secundárias */
-  --secondary: oklch(0.2 0.05 260); /* Azul médio */
-  --secondary-foreground: oklch(0.95 0.01 260);
-  
+  --secondary: oklch(0.18 0.08 280); /* Roxo médio */
+  --secondary-foreground: oklch(0.95 0.01 280);
+
   /* Cores neutras */
-  --muted: oklch(0.18 0.02 260); /* Azul acinzentado */
-  --muted-foreground: oklch(0.6 0.01 260);
-  
+  --muted: oklch(0.15 0.03 280); /* Roxo acinzentado */
+  --muted-foreground: oklch(0.6 0.02 280);
+
   /* Destaque */
-  --accent: oklch(0.25 0.08 240); /* Azul esverdeado */
-  --accent-foreground: oklch(0.95 0.01 260);
-  
+  --accent: oklch(0.22 0.12 300); /* Roxo rosado */
+  --accent-foreground: oklch(0.95 0.01 280);
+
   /* Destrutivo */
-  --destructive: oklch(0.7 0.25 27); /* Vermelho */
-  --destructive-foreground: oklch(0.95 0.01 260);
-  
+  --destructive: oklch(0.7 0.25 15); /* Vermelho */
+  --destructive-foreground: oklch(0.95 0.01 280);
+
   /* Bordas e inputs */
-  --border: oklch(0.2 0.02 260);
-  --input: oklch(0.18 0.02 260);
-  --ring: oklch(0.7 0.2 260);
-  
+  --border: oklch(0.18 0.03 280);
+  --input: oklch(0.15 0.03 280);
+  --ring: oklch(0.7 0.22 280);
+
   /* Cores para gráficos */
-  --chart-1: oklch(0.7 0.2 260); /* Azul */
-  --chart-2: oklch(0.6 0.18 240); /* Azul esverdeado */
-  --chart-3: oklch(0.75 0.22 280); /* Azul violeta */
-  --chart-4: oklch(0.55 0.15 220); /* Azul ciano */
-  --chart-5: oklch(0.65 0.2 200); /* Azul turquesa */
-  
+  --chart-1: oklch(0.7 0.22 280); /* Roxo */
+  --chart-2: oklch(0.6 0.2 300); /* Roxo rosado */
+  --chart-3: oklch(0.75 0.18 260); /* Roxo azulado */
+  --chart-4: oklch(0.55 0.16 320); /* Roxo magenta */
+  --chart-5: oklch(0.65 0.21 240); /* Roxo violeta */
+
   /* Sidebar */
-  --sidebar: oklch(0.15 0.02 260);
-  --sidebar-foreground: oklch(0.95 0.01 260);
-  --sidebar-primary: oklch(0.7 0.2 260);
-  --sidebar-primary-foreground: oklch(0.12 0.02 260);
-  --sidebar-accent: oklch(0.25 0.08 240);
-  --sidebar-accent-foreground: oklch(0.95 0.01 260);
-  --sidebar-border: oklch(0.2 0.02 260);
-  --sidebar-ring: oklch(0.7 0.2 260);
+  --sidebar: oklch(0.12 0.03 280);
+  --sidebar-foreground: oklch(0.95 0.01 280);
+  --sidebar-primary: oklch(0.7 0.22 280);
+  --sidebar-primary-foreground: oklch(0.08 0.02 280);
+  --sidebar-accent: oklch(0.22 0.12 300);
+  --sidebar-accent-foreground: oklch(0.95 0.01 280);
+  --sidebar-border: oklch(0.18 0.03 280);
+  --sidebar-ring: oklch(0.7 0.22 280);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html,
+  body {
+    @apply h-full overflow-hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -189,23 +195,46 @@
     animation: accordion-up 0.2s ease-out;
   }
 
-  /* Scrollbar personalizada */
+  /* Scrollbar personalizada com tema roxo */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: oklch(0.55 0.22 260) oklch(0.95 0 0);
+    scrollbar-color: oklch(0.55 0.25 280) oklch(0.97 0.02 280);
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: oklch(0.95 0 0);
+    background: oklch(0.97 0.02 280);
+    border-radius: 3px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: oklch(0.55 0.22 260);
-    border-radius: 20px;
+    background: linear-gradient(135deg, oklch(0.55 0.25 280), oklch(0.65 0.2 300));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, oklch(0.45 0.25 280), oklch(0.55 0.2 300));
+  }
+
+  /* Gradientes personalizados */
+  .gradient-purple {
+    background: linear-gradient(135deg, oklch(0.55 0.25 280), oklch(0.65 0.2 300));
+  }
+
+  .gradient-purple-light {
+    background: linear-gradient(135deg, oklch(0.95 0.08 280), oklch(0.92 0.12 300));
+  }
+
+  /* Sombras personalizadas */
+  .shadow-purple {
+    box-shadow: 0 4px 20px -2px oklch(0.55 0.25 280 / 0.15);
+  }
+
+  .shadow-purple-lg {
+    box-shadow: 0 10px 40px -4px oklch(0.55 0.25 280 / 0.2);
   }
 }
