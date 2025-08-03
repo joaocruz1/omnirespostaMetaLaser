@@ -4,12 +4,16 @@ const EVOLUTION_API_BASE_URL = process.env.EVOLUTION_API_BASE_URL || "http://loc
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY
 const INSTANCE_NAME = process.env.INSTANCE_NAME || "joaoomni"
 
-export async function POST(request: NextRequest) {
-  try {
-    const { chatId, message, type } = await request.json()
+type RouterContext = { 
+  params : Promise<{id: string}>
+}
 
-    // Extrair número do telefone do chatId (em produção, buscar do banco)
-    const phoneNumber = "5535997478472" // Mock
+export async function POST(request: Request, context : RouterContext) : Promise<NextResponse> {
+
+  const params = await context.params
+  const phoneNumber = params.id
+  try {
+    const {message} = await request.json()
 
     // Enviar mensagem via Evolution API
     const evolutionResponse = await fetch(`${EVOLUTION_API_BASE_URL}/message/sendText/${INSTANCE_NAME}`, {
