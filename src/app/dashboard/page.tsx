@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/auth-provider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Pusher from 'pusher-js';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +28,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
-  // NOVO ESTADO: para servir de gatilho para o ChatWindow
   const [lastPusherEvent, setLastPusherEvent] = useState<any>(null);
+  // Estado para controlar as notificações de chats não lidos (agora um Map)
+  const [unreadChats, setUnreadChats] = useState<Map<string, number>>(new Map());
 
   const loadChats = async () => {
     try {
@@ -47,6 +48,17 @@ export default function DashboardPage() {
     }
   };
 
+  // Função para lidar com a seleção de um chat
+  const handleSelectChat = useCallback((chat: Chat) => {
+    setSelectedChat(chat);
+    // Ao selecionar um chat, remove-o do mapa de contagem para limpar a notificação
+    setUnreadChats(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(chat.id);
+      return newMap;
+    });
+  }, []);
+
   useEffect(() => {
     if (!user) {
       router.push("/login");
@@ -63,10 +75,25 @@ export default function DashboardPage() {
 
     channel.bind('chat-event', (data: any) => {
       console.log("Pusher event received, reloading UI:", data);
-      // 1. Atualiza a lista de chats (para o ChatList)
+      
       loadChats();
-      // 2. ATUALIZAÇÃO: Guarda o evento para passar como gatilho para o ChatWindow
       setLastPusherEvent(data);
+
+      // Lógica para incrementar a contagem de notificações
+      if (data.event === 'messages.upsert' && data.data?.messages?.[0]) {
+        const message = data.data.messages[0];
+        const chatId = message.key.remoteJid;
+        const isIncoming = !message.key.fromMe;
+
+        if (isIncoming && chatId !== selectedChat?.id) {
+          setUnreadChats(prev => {
+            const newMap = new Map(prev);
+            const currentCount = newMap.get(chatId) || 0;
+            newMap.set(chatId, currentCount + 1); // Incrementa a contagem
+            return newMap;
+          });
+        }
+      }
     });
 
     return () => {
@@ -74,7 +101,7 @@ export default function DashboardPage() {
       channel.unsubscribe();
       pusher.disconnect();
     };
-  }, [user, router]);
+  }, [user, router, selectedChat?.id]); // Adicionado selectedChat.id como dependência
 
   if (!user) {
     return null;
@@ -158,12 +185,12 @@ export default function DashboardPage() {
                   <ChatList
                     chats={chats}
                     selectedChat={selectedChat}
-                    onSelectChat={setSelectedChat}
+                    onSelectChat={handleSelectChat}
                     onRefresh={loadChats}
+                    unreadChats={unreadChats}
                   />
                 </div>
                 <div className="lg:col-span-2 min-h-0">
-                  {/* ATUALIZAÇÃO: Passando a nova prop */}
                   <ChatWindow 
                     chat={selectedChat} 
                     onChatUpdate={loadChats} 

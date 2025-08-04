@@ -19,14 +19,16 @@ interface Chat {
   status: "active" | "waiting" | "closed"
 }
 
+// ATUALIZAÇÃO: A prop 'unreadChats' agora é um Map
 interface ChatListProps {
   chats: Chat[]
   selectedChat: Chat | null
   onSelectChat: (chat: Chat) => void
   onRefresh: () => void
+  unreadChats: Map<string, number>
 }
 
-export function ChatList({ chats, selectedChat, onSelectChat, onRefresh }: ChatListProps) {
+export function ChatList({ chats, selectedChat, onSelectChat, onRefresh, unreadChats }: ChatListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
 
@@ -150,49 +152,62 @@ export function ChatList({ chats, selectedChat, onSelectChat, onRefresh }: ChatL
             </div>
           ) : (
             <div className="space-y-0.5 p-2">
-              {filteredChats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={cn(
-                    "p-3 cursor-pointer rounded-lg transition-all duration-200 border border-transparent hover:border-purple-200/50 dark:hover:border-purple-800/50",
-                    selectedChat?.id === chat.id
-                      ? "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 shadow-sm"
-                      : "hover:bg-white/80 dark:hover:bg-gray-800/50",
-                  )}
-                  onClick={() => onSelectChat(chat)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Circle className={cn("w-2 h-2 fill-current", getStatusColor(chat.status))} />
-                        <p className="font-medium text-sm truncate text-foreground">{chat.contact}</p>
-                        {chat.unreadCount > 0 && (
-                          <Badge variant="destructive" className="text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600">
-                            {chat.unreadCount}
-                          </Badge>
-                        )}
-                      </div>
+              {filteredChats.map((chat) => {
+                // Pega a contagem de mensagens não lidas do nosso estado do frontend
+                const newMessagesCount = unreadChats.get(chat.id);
 
-                      <p className="text-xs text-muted-foreground truncate mb-2 leading-relaxed pl-4">
-                        {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
-                      </p>
-
-                      <div className="flex items-center justify-between pl-4">
-                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span>{chat.timestamp}</span>
+                return (
+                  <div
+                    key={chat.id}
+                    className={cn(
+                      "p-3 cursor-pointer rounded-lg transition-all duration-200 border border-transparent hover:border-purple-200/50 dark:hover:border-purple-800/50",
+                      selectedChat?.id === chat.id
+                        ? "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 shadow-sm"
+                        : "hover:bg-white/80 dark:hover:bg-gray-800/50",
+                    )}
+                    onClick={() => onSelectChat(chat)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Circle className={cn("w-2 h-2 flex-shrink-0 fill-current", getStatusColor(chat.status))} />
+                          <p className="font-medium text-sm truncate text-foreground">{chat.contact}</p>
+                          
+                          {/* ATUALIZAÇÃO: Lógica de notificação aprimorada */}
+                          {(newMessagesCount && newMessagesCount > 0) ? (
+                            // Se tivermos uma contagem no frontend, mostramos ela
+                            <Badge variant="destructive" className="ml-auto flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600">
+                              {newMessagesCount}
+                            </Badge>
+                          ) : (chat.unreadCount > 0) && (
+                            // Senão, usamos como fallback a contagem da API
+                            <Badge variant="destructive" className="ml-auto flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600">
+                              {chat.unreadCount}
+                            </Badge>
+                          )}
                         </div>
-                        {chat.assignedTo && (
+
+                        <p className="text-xs text-muted-foreground truncate mb-2 leading-relaxed pl-4">
+                          {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
+                        </p>
+
+                        <div className="flex items-center justify-between pl-4">
                           <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                            <User className="h-3 w-3" />
-                            <span className="truncate max-w-16">{chat.assignedTo}</span>
+                            <Clock className="h-3 w-3" />
+                            <span>{chat.timestamp}</span>
                           </div>
-                        )}
+                          {chat.assignedTo && (
+                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span className="truncate max-w-16">{chat.assignedTo}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </ScrollArea>
