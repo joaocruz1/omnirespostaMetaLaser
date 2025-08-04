@@ -35,7 +35,6 @@ interface Message {
 interface ChatWindowProps {
   chat: Chat | null
   onChatUpdate: () => void
-  // NOVA PROP: para servir de gatilho
   lastPusherEvent: any 
 }
 
@@ -73,9 +72,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     } else {
       setMessages([])
     }
-    // ATUALIZAÇÃO: Adicionamos 'lastPusherEvent' ao array de dependências.
-    // Isso fará com que este efeito rode novamente sempre que um novo evento
-    // do Pusher for recebido pelo componente pai (DashboardPage).
   }, [chat, lastPusherEvent])
 
   useEffect(() => {
@@ -103,44 +99,56 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !chat || loading) return
+    if (!newMessage.trim() || !chat || loading) return;
 
-    setLoading(true)
+    setLoading(true);
+
+    const messageToSend = newMessage;
+    
+    // UI Otimista: Adiciona a mensagem à UI antes mesmo da confirmação da API
+    const optimisticMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: messageToSend,
+      sender: "agent",
+      type: "text",
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+    setNewMessage("");
+
     try {
-      // ATENÇÃO: A sua API de envio está configurada para /api/messages/send,
-      // mas o correto, seguindo o padrão REST, seria /api/chats/[id]/messages
-      // Vou manter como está no seu código, mas considere ajustar no futuro.
       const response = await fetch(`/api/messages/${chat.id}/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({
-          message: newMessage,
-        }),
-      })
+        body: JSON.stringify({ message: messageToSend }),
+      });
 
       if (response.ok) {
-        setNewMessage("")
-        // Não precisamos mais chamar loadMessages() e onChatUpdate() aqui,
-        // pois o webhook da Evolution vai disparar o evento no Pusher,
-        // que por sua vez vai acionar a atualização em tempo real.
-        // Isso evita uma atualização dupla e confia no fluxo em tempo real.
-        toast.success("Mensagem enviada com sucesso")
+        // A mensagem foi enviada com sucesso.
+        // A atualização via webhook/Pusher irá substituir a mensagem otimista pela versão final do servidor.
+        toast.success("Mensagem enviada com sucesso");
+        // Atualiza a lista de chats para refletir a nova última mensagem.
+        onChatUpdate();
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to send message")
+        // Se o envio falhar, remove a mensagem otimista e restaura o texto no input.
+        toast.error("Falha ao enviar mensagem.");
+        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+        setNewMessage(messageToSend);
       }
     } catch (error) {
-      console.error("Failed to send message:", error)
-      toast.error(`Erro ao enviar mensagem: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      console.error("Failed to send message:", error);
+      toast.error("Erro ao enviar mensagem.");
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      setNewMessage(messageToSend);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // ... O resto do seu componente ChatWindow permanece igual
   const transferChat = async (userId: string) => {
     if (!chat) return
 
