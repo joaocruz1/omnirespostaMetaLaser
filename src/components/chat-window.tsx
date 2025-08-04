@@ -21,6 +21,7 @@ interface Chat {
   unreadCount: number
   assignedTo?: string
   status: "active" | "waiting" | "closed"
+  profilePicUrl?: string;
 }
 
 interface Message {
@@ -44,6 +45,8 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const { user } = useAuth()
 
@@ -98,54 +101,86 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     }
   }
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !chat || loading) return;
-
+  const sendMessage = async (file?: File) => {
+    if ((!newMessage.trim() && !file) || !chat || loading) return;
+  
     setLoading(true);
-
-    const messageToSend = newMessage;
-    
-    // UI Otimista: Adiciona a mensagem à UI antes mesmo da confirmação da API
-    const optimisticMessage: Message = {
-      id: `temp-${Date.now()}`,
-      content: messageToSend,
-      sender: "agent",
-      type: "text",
-      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+  
+    const optimisticId = `temp-${Date.now()}`;
+    let optimisticMessage: Message;
+  
+    if (file) {
+      optimisticMessage = {
+        id: optimisticId,
+        content: `Enviando ${file.name}...`,
+        sender: "agent",
+        type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'document',
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        mediaUrl: URL.createObjectURL(file)
+      };
+    } else {
+      optimisticMessage = {
+        id: optimisticId,
+        content: newMessage,
+        sender: "agent",
+        type: "text",
+        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      };
+    }
+  
+    setMessages(prev => [...prev, optimisticMessage]);
     setNewMessage("");
-
+  
     try {
-      const response = await fetch(`/api/messages/${chat.id}/send`, {
+      const formData = new FormData();
+      if (file) {
+        formData.append('file', file);
+        formData.append('caption', newMessage);
+      }
+  
+      const endpoint = file ? `/api/messages/${chat.id}/send-media` : `/api/messages/${chat.id}/send`;
+  
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
+          ...(!file && {"Content-Type": "application/json"})
         },
-        body: JSON.stringify({ message: messageToSend }),
+        body: file ? formData : JSON.stringify({ message: optimisticMessage.content }),
       });
-
+  
+      const responseData = await response.json();
+  
       if (response.ok) {
-        // A mensagem foi enviada com sucesso.
-        // A atualização via webhook/Pusher irá substituir a mensagem otimista pela versão final do servidor.
         toast.success("Mensagem enviada com sucesso");
-        // Atualiza a lista de chats para refletir a nova última mensagem.
+        setMessages(prev => prev.map(msg => 
+            msg.id === optimisticId ? { ...msg, id: responseData.data.key.id } : msg
+        ));
         onChatUpdate();
       } else {
-        // Se o envio falhar, remove a mensagem otimista e restaura o texto no input.
-        toast.error("Falha ao enviar mensagem.");
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-        setNewMessage(messageToSend);
+        throw new Error(responseData.error || "Falha ao enviar mensagem.");
       }
     } catch (error) {
       console.error("Failed to send message:", error);
-      toast.error("Erro ao enviar mensagem.");
-      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-      setNewMessage(messageToSend);
+      toast.error(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      if (!file) setNewMessage(optimisticMessage.content);
     } finally {
       setLoading(false);
+      if (file && optimisticMessage.mediaUrl) {
+        URL.revokeObjectURL(optimisticMessage.mediaUrl);
+      }
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      sendMessage(file);
+    }
+    // Limpa o valor do input para permitir selecionar o mesmo arquivo novamente
+    if(event.target) {
+      event.target.value = "";
     }
   };
 
@@ -243,7 +278,11 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center shadow-sm">
-              <User className="h-5 w-5 text-white" />
+            {chat.profilePicUrl ? (
+                <img src={chat.profilePicUrl} alt="Foto de Perfil" className="w-10 h-10 rounded-lg object-cover"/>
+            ) : (
+                <User className="h-5 w-5 text-white" />
+            )}
             </div>
             <div>
               <CardTitle className="text-base font-semibold">{chat.contact}</CardTitle>
@@ -319,34 +358,55 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <div className="flex-1 min-h-0">
           <ScrollArea className="h-full scrollbar-thin">
-            <div className="p-4 space-y-3">
-              {messages.map((message) => (
+          <div className="p-4 space-y-3">
+            {messages.map((message) => (
                 <div
-                  key={message.id}
-                  className={`flex ${message.sender === "agent" ? "justify-end" : "justify-start"}`}
+                key={message.id}
+                className={`flex ${message.sender === "agent" ? "justify-end" : "justify-start"}`}
                 >
-                  <div
+                <div
                     className={cn(
-                      "max-w-xs lg:max-w-md px-3 py-2 rounded-lg shadow-sm text-sm",
-                      message.sender === "agent"
+                    "max-w-xs lg:max-w-md px-3 py-2 rounded-lg shadow-sm text-sm",
+                    message.sender === "agent"
                         ? "gradient-purple text-white shadow-purple/20"
                         : "bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900/50",
                     )}
-                  >
-                    <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                >
+                    {message.type === 'image' && message.mediaUrl && (
+                        <img src={message.mediaUrl} alt={message.content || 'Imagem'} className="rounded-lg mb-2 max-w-full h-auto" />
+                    )}
+                    {message.type === 'audio' && message.mediaUrl && (
+                        <audio controls src={message.mediaUrl} className="w-full h-10" />
+                    )}
+                    {message.type === 'document' && message.mediaUrl && (
+                        <a 
+                            href={message.mediaUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            download={message.content || 'documento'}
+                            className="flex items-center gap-2 p-2 bg-black/10 rounded-md hover:bg-black/20 transition-colors"
+                        >
+                            <Paperclip className="h-4 w-4" />
+                            <span className="underline">{message.content || 'Baixar Documento'}</span>
+                        </a>
+                    )}
+                    
+                    {message.content && <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>}
+                    
                     <p
-                      className={cn(
-                        "text-xs mt-1 text-right",
-                        message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
-                      )}
+                        className={cn(
+                            "text-xs mt-1 text-right",
+                            message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
+                        )}
                     >
-                      {message.timestamp}
+                        {message.timestamp}
                     </p>
-                  </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
+                </div>
+            ))}
+            <div ref={messagesEndRef} />
             </div>
+
           </ScrollArea>
         </div>
 
@@ -368,7 +428,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
             </div>
             <div className="flex space-x-1">
               <Button
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 disabled={loading || !newMessage.trim()}
                 size="sm"
                 className="h-8 w-8 p-0 gradient-purple hover:opacity-90 shadow-sm"
@@ -379,9 +439,16 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
-              >
+                onClick={() => fileInputRef.current?.click()}
+                >
                 <Paperclip className="h-3 w-3" />
               </Button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileSelect}
+                className="hidden" 
+              />
             </div>
           </div>
         </div>

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       enabled: true,
       url: url,
       webhookByEvents: false,
-      webhookBase64: false,
+      webhookBase64: true,
       events: allEvents
     };
 

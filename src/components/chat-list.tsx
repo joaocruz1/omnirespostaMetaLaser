@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, RefreshCw, User, Clock, MessageCircle, Circle } from "lucide-react"
+import { Search, RefreshCw, User, Clock, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Chat {
@@ -17,9 +17,9 @@ interface Chat {
   unreadCount: number
   assignedTo?: string
   status: "active" | "waiting" | "closed"
+  profilePicUrl?: string; // Adicionada a propriedade para a foto
 }
 
-// ATUALIZAÇÃO: A prop 'unreadChats' agora é um Map
 interface ChatListProps {
   chats: Chat[]
   selectedChat: Chat | null
@@ -43,32 +43,6 @@ export function ChatList({ chats, selectedChat, onSelectChat, onRefresh, unreadC
 
     return matchesSearch && matchesFilter
   })
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "text-green-500"
-      case "waiting":
-        return "text-yellow-500"
-      case "closed":
-        return "text-gray-400"
-      default:
-        return "text-gray-400"
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "active":
-        return "Ativo"
-      case "waiting":
-        return "Aguardando"
-      case "closed":
-        return "Finalizado"
-      default:
-        return "Desconhecido"
-    }
-  }
 
   return (
     <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
@@ -153,7 +127,6 @@ export function ChatList({ chats, selectedChat, onSelectChat, onRefresh, unreadC
           ) : (
             <div className="space-y-0.5 p-2">
               {filteredChats.map((chat) => {
-                // Pega a contagem de mensagens não lidas do nosso estado do frontend
                 const newMessagesCount = unreadChats.get(chat.id);
 
                 return (
@@ -167,31 +140,37 @@ export function ChatList({ chats, selectedChat, onSelectChat, onRefresh, unreadC
                     )}
                     onClick={() => onSelectChat(chat)}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-center justify-between">
+                      {/* --- INÍCIO DA ALTERAÇÃO --- */}
+                      <div className="flex-shrink-0 mr-3">
+                        {chat.profilePicUrl ? (
+                          <img src={chat.profilePicUrl} alt="Foto de Perfil" className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                            <User className="h-5 w-5 text-gray-500" />
+                          </div>
+                        )}
+                      </div>
+                      {/* --- FIM DA ALTERAÇÃO --- */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-1">
-                          <Circle className={cn("w-2 h-2 flex-shrink-0 fill-current", getStatusColor(chat.status))} />
                           <p className="font-medium text-sm truncate text-foreground">{chat.contact}</p>
-                          
-                          {/* ATUALIZAÇÃO: Lógica de notificação aprimorada */}
                           {(newMessagesCount && newMessagesCount > 0) ? (
-                            // Se tivermos uma contagem no frontend, mostramos ela
                             <Badge variant="destructive" className="ml-auto flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600">
                               {newMessagesCount}
                             </Badge>
                           ) : (chat.unreadCount > 0) && (
-                            // Senão, usamos como fallback a contagem da API
                             <Badge variant="destructive" className="ml-auto flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600">
                               {chat.unreadCount}
                             </Badge>
                           )}
                         </div>
 
-                        <p className="text-xs text-muted-foreground truncate mb-2 leading-relaxed pl-4">
+                        <p className="text-xs text-muted-foreground truncate mb-2 leading-relaxed">
                           {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
                         </p>
 
-                        <div className="flex items-center justify-between pl-4">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             <span>{chat.timestamp}</span>
