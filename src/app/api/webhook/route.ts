@@ -1,65 +1,47 @@
-// src/app/api/webhook/route.ts
-import { type NextRequest, NextResponse } from "next/server"
-import { broadcast } from '@/lib/websocket';
+import { type NextRequest, NextResponse } from "next/server";
+import { pusherServer } from '@/lib/pusher';
+
+// Lista de eventos que devem acionar uma atualização no frontend.
+// Adicione ou remova eventos conforme sua necessidade.
+const RELEVANT_EVENTS = [
+  "messages.upsert",
+  "contacts.update",
+  "chats.update",
+  "chats.delete",
+  "connection.update",
+  // Adicione aqui outros eventos da Evolution API que você queira que atualizem a UI
+];
 
 export async function POST(request: NextRequest) {
   try {
-    const webhookData = await request.json()
-    // Processar diferentes tipos de eventos
-    switch (webhookData.event) {
-      // --- ALTERAÇÃO AQUI ---
-      // Tratar tanto 'messages.upsert' quanto 'contacts.update' como um gatilho para atualizar os chats
-      case "messages.upsert":
-      case "contacts.update": // Adicionado para tratar a atualização de contatos
-        await handleNewMessage(webhookData)
-        break
+    // 1. Recebe os dados do webhook da Evolution API
+    const webhookData = await request.json();
+
+    // 2. Verifica se o evento recebido é um dos que nos interessam
+    if (RELEVANT_EVENTS.includes(webhookData.event)) {
       
-      case "chats.update":
-        broadcast({ event: 'chat_update', data: webhookData.data });
-        break
+      // 3. Define o canal e o nome do evento para o Pusher
+      // Usamos um canal único para todas as atualizações relacionadas ao chat.
+      const channelName = 'chat-updates'; 
+      // O nome do evento pode ser genérico, já que os dados contém o tipo de evento original.
+      const eventName = 'chat-event'; 
 
-      case "connection.update":
-        await handleConnectionUpdate(webhookData)
-        break
+      // 4. Dispara o evento para o Pusher com todos os dados do webhook
+      // O frontend receberá 'webhookData' completo e poderá decidir o que fazer.
+      await pusherServer.trigger(channelName, eventName, webhookData);
 
-      // Mantendo compatibilidade com eventos antigos (opcional)
-      case "MESSAGE":
-        await handleNewMessage(webhookData)
-        break
-      case "STATUS":
-        await handleStatusUpdate(webhookData)
-        break
-      case "CONNECTION":
-        await handleConnectionUpdate(webhookData)
-        break
-
-      default:
-        console.log("Unknown webhook event:", webhookData.event)
+      // Log para confirmar que o evento foi enviado (útil para depuração)
+      console.log(`Pusher event '${eventName}' triggered on channel '${channelName}' for Evolution event '${webhookData.event}'`);
+    } else {
+      // Opcional: Logar eventos que não estamos tratando
+      console.log(`Ignored webhook event: ${webhookData.event}`);
     }
 
-    return NextResponse.json({ success: true })
+    // 5. Responde à Evolution API com sucesso
+    return NextResponse.json({ success: true });
+
   } catch (error) {
-    console.error("Webhook processing error:", error)
-    return NextResponse.json({ error: "Erro ao processar webhook" }, { status: 500 })
+    console.error("Webhook processing error:", error);
+    return NextResponse.json({ error: "Erro ao processar webhook" }, { status: 500 });
   }
-}
-
-async function handleNewMessage(data: any) {
-  // Em produção, salvar mensagem no banco e notificar usuários via WebSocket
-  console.log("New message/update event received from handler:", data.data)
-  // Notifica o frontend para recarregar a lista de chats
-  broadcast({
-    event: 'new_message',
-    data: data.data
-  });
-}
-
-async function handleStatusUpdate(data: any) {
-  console.log("Status update:", data)
-  // Atualizar status da mensagem (enviada, entregue, lida)
-}
-
-async function handleConnectionUpdate(data: any) {
-  
-  // Atualizar status da conexão da instância
 }

@@ -1,55 +1,35 @@
 "use client"
 
-import { useAuth } from "@/components/auth-provider"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MessageSquare, Users, Settings, LogOut, Phone, Clock, CheckCircle, Sparkles } from "lucide-react"
-import { ChatList } from "@/components/chat-list"
-import { ChatWindow } from "@/components/chat-window"
-import { UserManagement } from "@/components/user-management"
-import { InstanceSettings } from "@/components/instance-setting"
+import { useAuth } from "@/components/auth-provider";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Pusher from 'pusher-js';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageSquare, Users, Settings, LogOut, Sparkles } from "lucide-react";
+import { ChatList } from "@/components/chat-list";
+import { ChatWindow } from "@/components/chat-window";
+import { UserManagement } from "@/components/user-management";
+import { InstanceSettings } from "@/components/instance-setting";
 
 interface Chat {
-  id: string
-  contact: string
-  lastMessage: string
-  timestamp: string
-  unreadCount: number
-  assignedTo?: string
-  status: "active" | "waiting" | "closed"
+  id: string;
+  contact: string;
+  lastMessage: string;
+  timestamp: string;
+  unreadCount: number;
+  assignedTo?: string;
+  status: "active" | "waiting" | "closed";
 }
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth()
-  const router = useRouter()
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null)
-  const [chats, setChats] = useState<Chat[]>([])
-  const [stats, setStats] = useState({
-    totalChats: 0,
-    activeChats: 0,
-    waitingChats: 0,
-    closedChats: 0,
-  })
-
-  useEffect(() => {
-    if (!user) {
-      router.push("/login")
-      return
-    }
-
-    loadChats()
-    loadStats()
-
-    const interval = setInterval(() => {
-      loadChats()
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [user, router])
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [chats, setChats] = useState<Chat[]>([]);
+  // NOVO ESTADO: para servir de gatilho para o ChatWindow
+  const [lastPusherEvent, setLastPusherEvent] = useState<any>(null);
 
   const loadChats = async () => {
     try {
@@ -57,39 +37,51 @@ export default function DashboardPage() {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      })
+      });
       if (response.ok) {
-        const data = await response.json()
-        setChats(data)
+        const data = await response.json();
+        setChats(data);
       }
     } catch (error) {
-      console.error("Failed to load chats:", error)
+      console.error("Failed to load chats:", error);
     }
-  }
+  };
 
-  const loadStats = async () => {
-    try {
-      const response = await fetch("/api/stats", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setStats(data)
-      }
-    } catch (error) {
-      console.error("Failed to load stats:", error)
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+      return;
     }
-  }
+
+    loadChats();
+
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
+
+    const channel = pusher.subscribe('chat-updates');
+
+    channel.bind('chat-event', (data: any) => {
+      console.log("Pusher event received, reloading UI:", data);
+      // 1. Atualiza a lista de chats (para o ChatList)
+      loadChats();
+      // 2. ATUALIZAÇÃO: Guarda o evento para passar como gatilho para o ChatWindow
+      setLastPusherEvent(data);
+    });
+
+    return () => {
+      channel.unbind_all();
+      channel.unsubscribe();
+      pusher.disconnect();
+    };
+  }, [user, router]);
 
   if (!user) {
-    return null
+    return null;
   }
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-purple-50/30 dark:to-purple-950/20">
-      {/* Header */}
       <header className="flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-purple-200/50 dark:border-purple-800/50 shadow-sm">
         <div className="px-4 py-3">
           <div className="flex justify-between items-center">
@@ -130,12 +122,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
-
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
-        {/* Stats Cards - Compactas */}
-      
-        {/* Tabs Content */}
         <div className="flex-1 min-h-0">
           <Tabs defaultValue="chats" className="h-full flex flex-col">
             <TabsList className="flex-shrink-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-purple-200/50 dark:border-purple-800/50 shadow-sm">
@@ -165,7 +152,6 @@ export default function DashboardPage() {
                 </>
               )}
             </TabsList>
-
             <TabsContent value="chats" className="flex-1 mt-4 min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
                 <div className="lg:col-span-1 min-h-0">
@@ -177,17 +163,20 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="lg:col-span-2 min-h-0">
-                  <ChatWindow chat={selectedChat} onChatUpdate={loadChats} />
+                  {/* ATUALIZAÇÃO: Passando a nova prop */}
+                  <ChatWindow 
+                    chat={selectedChat} 
+                    onChatUpdate={loadChats} 
+                    lastPusherEvent={lastPusherEvent} 
+                  />
                 </div>
               </div>
             </TabsContent>
-
             {user.role === "admin" && (
               <>
                 <TabsContent value="users" className="flex-1 mt-6 min-h-0 overflow-auto scrollbar-thin">
                   <UserManagement />
                 </TabsContent>
-
                 <TabsContent value="settings" className="flex-1 mt-6 min-h-0 overflow-auto scrollbar-thin">
                   <InstanceSettings />
                 </TabsContent>
@@ -197,5 +186,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
