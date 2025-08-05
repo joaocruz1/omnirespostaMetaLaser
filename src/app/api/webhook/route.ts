@@ -21,14 +21,20 @@ export async function POST(request: NextRequest) {
     if (RELEVANT_EVENTS.includes(webhookData.event)) {
       
       // 3. Define o canal e o nome do evento para o Pusher
-      // Usamos um canal único para todas as atualizações relacionadas ao chat.
       const channelName = 'chat-updates'; 
-      // O nome do evento pode ser genérico, já que os dados contém o tipo de evento original.
       const eventName = 'chat-event'; 
 
-      // 4. Dispara o evento para o Pusher com todos os dados do webhook
-      // O frontend receberá 'webhookData' completo e poderá decidir o que fazer.
-      await pusherServer.trigger(channelName, eventName, webhookData);
+      // 4. Cria um payload menor para enviar ao Pusher, evitando o erro de "Payload Too Large"
+      const payload = {
+        event: webhookData.event,
+        // Você pode enviar outros dados pequenos se forem úteis, como o ID do chat
+        chatId: webhookData.data?.key?.remoteJid || webhookData.data?.id,
+        // Adicionando um timestamp para referência 
+        timestamp: new Date().toISOString()
+      };
+
+      // 5. Dispara o evento para o Pusher com o payload reduzido
+      await pusherServer.trigger(channelName, eventName, payload);
 
       // Log para confirmar que o evento foi enviado (útil para depuração)
       console.log(`Pusher event '${eventName}' triggered on channel '${channelName}' for Evolution event '${webhookData.event}'`);
@@ -37,7 +43,7 @@ export async function POST(request: NextRequest) {
       console.log(`Ignored webhook event: ${webhookData.event}`);
     }
 
-    // 5. Responde à Evolution API com sucesso
+    // 6. Responde à Evolution API com sucesso
     return NextResponse.json({ success: true });
 
   } catch (error) {

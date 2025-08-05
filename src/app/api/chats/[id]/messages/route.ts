@@ -24,12 +24,15 @@ type RawMessage = {
   };
 };
 
-// Assinatura da função corrigida para o padrão do Next.js App Router
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
 export async function GET(
-  request: Request, 
-  { params }: { params: { id: string } }
+  request: Request,
+  context: RouteContext
 ): Promise<NextResponse> {
-  
+  const params = await context.params;
   const chatId = params.id;
 
   try {
@@ -37,34 +40,35 @@ export async function GET(
       return NextResponse.json({ error: "Chat ID é obrigatório" }, { status: 400 });
     }
 
-    // --- CORREÇÃO APLICADA AQUI ---
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
     if (EVOLUTION_API_KEY) {
-      headers['apikey'] = EVOLUTION_API_KEY;
+      headers["apikey"] = EVOLUTION_API_KEY;
     }
-    // --- FIM DA CORREÇÃO ---
 
     const response = await fetch(`${EVOLUTION_API_BASE_URL}/chat/findMessages/${INSTANCE_NAME}`, {
-        method: 'POST',
-        headers: headers, // Usando o objeto de headers corrigido
+      method: "POST",
+      headers,
       body: JSON.stringify({
-        "where": {
-          "key": {
-            "remoteJid": chatId
-          }
-        }
-      })
+        where: {
+          key: {
+            remoteJid: chatId,
+          },
+        },
+      }),
     });
-    
+
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Falha ao buscar mensagens da API Evolution:", errorText);
-        return NextResponse.json({
+      const errorText = await response.text();
+      console.error("Falha ao buscar mensagens da API Evolution:", errorText);
+      return NextResponse.json(
+        {
           error: "Falha ao buscar mensagens da API Evolution",
-          details: errorText
-        }, { status: response.status });
+          details: errorText,
+        },
+        { status: response.status }
+      );
     }
 
     const apiResponse = await response.json();
@@ -77,35 +81,41 @@ export async function GET(
         { status: 500 }
       );
     }
-    
+
     const sortedMessages = [...messagesArray].sort(
       (a, b) => a.messageTimestamp - b.messageTimestamp
     );
 
     const formattedMessagesPromises = sortedMessages.map(async (msg) => {
       let content = "[Mensagem não suportada]";
-      let type: "text" | "image" | "audio" | "document" | "location" = "text";
+      let type: "text" | "image" | "audio" | "document" | "location" | "video" = "text";
       let mediaUrl: string | undefined = undefined;
 
-      const getMediaAsDataUrl = async (messageData: object) => {
+      const getMediaAsDataUrl = async (messageData: object, isVideo: boolean = false) => {
         try {
-          // --- CORREÇÃO APLICADA AQUI TAMBÉM ---
           const mediaHeaders: HeadersInit = {
             "Content-Type": "application/json",
           };
           if (EVOLUTION_API_KEY) {
-            mediaHeaders['apikey'] = EVOLUTION_API_KEY;
+            mediaHeaders["apikey"] = EVOLUTION_API_KEY;
           }
-          // --- FIM DA CORREÇÃO ---
+
+          const bodyData = {
+            message: messageData,
+            ...(isVideo ? { convertToMp4: true } : {}),
+          };
 
           const mediaResponse = await fetch(`${EVOLUTION_API_BASE_URL}/chat/getBase64FromMediaMessage`, {
-            method: 'POST',
+            method: "POST",
             headers: mediaHeaders,
-            body: JSON.stringify({ message: messageData }),
+            body: JSON.stringify(bodyData),
           });
+
           if (mediaResponse.ok) {
             const mediaData = await mediaResponse.json();
-            return `data:${mediaData.mimetype};base64,${mediaData.base64}`;
+            if (mediaData?.mimetype && mediaData?.base64) {
+              return `data:${mediaData.mimetype};base64,${mediaData.base64}`;
+            }
           }
         } catch (e) {
           console.error("Erro ao buscar mídia da mensagem:", e);
@@ -127,8 +137,8 @@ export async function GET(
         mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message });
       } else if (msg.message?.videoMessage) {
         content = msg.message.videoMessage.caption || "[Vídeo]";
-        type = "document";
-        mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message });
+        type = "video"; // <- mudou de "document" para "video"
+        mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message }, true);
       } else if (msg.message?.stickerMessage) {
         content = "[Figurinha]";
         type = "image";
@@ -146,16 +156,15 @@ export async function GET(
         content: content,
         type: type,
         sender: msg.key.fromMe ? "agent" : "customer",
-        timestamp: new Date(msg.messageTimestamp * 1000).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit'
+        timestamp: new Date(msg.messageTimestamp * 1000).toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
         }),
         mediaUrl: mediaUrl,
       };
     });
-    
-    const formattedMessages = await Promise.all(formattedMessagesPromises);
 
+    const formattedMessages = await Promise.all(formattedMessagesPromises);
     return NextResponse.json(formattedMessages);
 
   } catch (error) {
