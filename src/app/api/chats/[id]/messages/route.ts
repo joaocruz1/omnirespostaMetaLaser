@@ -91,7 +91,7 @@ export async function GET(
       let type: "text" | "image" | "audio" | "document" | "location" | "video" = "text";
       let mediaUrl: string | undefined = undefined;
 
-      const getMediaAsDataUrl = async (messageData: object, isVideo: boolean = false) => {
+    const getMediaAsDataUrl = async (messageData: any, isVideo: boolean = false) => {
         try {
           const mediaHeaders: HeadersInit = {
             "Content-Type": "application/json",
@@ -100,12 +100,20 @@ export async function GET(
             mediaHeaders["apikey"] = EVOLUTION_API_KEY;
           }
 
+          // --- CORREÇÃO APLICADA AQUI ---
+          // Montamos o corpo da requisição exatamente como a documentação da API espera,
+          // usando apenas a "key" do objeto messageData.
           const bodyData = {
-            message: messageData,
+            message: {
+              key: {
+                id: messageData.key.id,
+              }
+            },
             ...(isVideo ? { convertToMp4: true } : {}),
           };
 
-          const mediaResponse = await fetch(`${EVOLUTION_API_BASE_URL}/chat/getBase64FromMediaMessage`, {
+          // Usando o endpoint que você confirmou que é o correto
+          const mediaResponse = await fetch(`${EVOLUTION_API_BASE_URL}/chat/getBase64FromMediaMessage/${INSTANCE_NAME}`, {
             method: "POST",
             headers: mediaHeaders,
             body: JSON.stringify(bodyData),
@@ -116,6 +124,8 @@ export async function GET(
             if (mediaData?.mimetype && mediaData?.base64) {
               return `data:${mediaData.mimetype};base64,${mediaData.base64}`;
             }
+          } else {
+            console.error(`Erro da Evolution API [${mediaResponse.status}]: ${await mediaResponse.text()}`);
           }
         } catch (e) {
           console.error("Erro ao buscar mídia da mensagem:", e);
@@ -128,10 +138,10 @@ export async function GET(
       } else if (msg.message?.extendedTextMessage?.text) {
         content = msg.message.extendedTextMessage.text;
       } else if (msg.message?.imageMessage) {
-        content = msg.message.imageMessage.caption || "";
         type = "image";
         mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message });
-      } else if (msg.message?.audioMessage) {
+        content = mediaUrl ? (msg.message.imageMessage.caption || "") : "[Erro ao carregar imagem]";
+      }  else if (msg.message?.audioMessage) {
         content = "";
         type = "audio";
         mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message });
@@ -140,9 +150,9 @@ export async function GET(
         type = "video"; // <- mudou de "document" para "video"
         mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message }, true);
       } else if (msg.message?.stickerMessage) {
-        content = "[Figurinha]";
-        type = "image";
-        mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message });
+          type = "image";
+          mediaUrl = await getMediaAsDataUrl({ key: msg.key, message: msg.message });
+          content = mediaUrl ? "" : "[Erro ao carregar figurinha]";
       } else if (msg.message?.documentMessage) {
         content = msg.message.documentMessage.caption || "[Documento]";
         type = "document";
