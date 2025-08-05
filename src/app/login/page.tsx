@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -20,9 +20,14 @@ export default function LoginPage() {
   const router = useRouter()
 
 
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
+
   if (user) {
-    router.push("/dashboard")
-    return null
+    return null; // Ou um loader, enquanto redireciona
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
