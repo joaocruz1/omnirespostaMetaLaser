@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,10 +10,26 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/components/auth-provider"
-import { Send, Paperclip, UserCheck, MoreVertical, Archive, UserX, MessageSquare, User, Circle } from "lucide-react"
+import {
+  Send,
+  Paperclip,
+  UserCheck,
+  MoreVertical,
+  Archive,
+  UserX,
+  MessageSquare,
+  User,
+  Circle,
+  Loader2,
+  ChevronDown,
+  MapPin,
+  ExternalLink,
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { MessageMedia } from "./message-media"
+import { ImageViewer } from "./image-viewer"
 
 interface Chat {
   id: string
@@ -21,68 +39,111 @@ interface Chat {
   unreadCount: number
   assignedTo?: string
   status: "active" | "waiting" | "closed"
-  profilePicUrl?: string;
+  profilePicUrl?: string
 }
 
 interface Message {
   id: string
   content: string
-  type: "text" | "image" | "audio" | "document" | "location"
+  type: "text" | "image" | "audio" | "document" | "location" | "video"
   sender: "user" | "agent" | "customer"
   timestamp: string
+  hasMedia?: boolean
   mediaUrl?: string
 }
 
 interface ChatWindowProps {
   chat: Chat | null
   onChatUpdate: () => void
-  lastPusherEvent: any 
+  lastPusherEvent: any
 }
 
 export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(false)
+  const [messagesLoading, setMessagesLoading] = useState(false)
   const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
+  const [showImageViewer, setShowImageViewer] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string; caption?: string } | null>(null)
   const { user } = useAuth()
 
-  const loadMessages = async () => {
-    if (!chat) return
+  const loadMessages = async (pageNum = 1, append = false) => {
+    if (!chat || messagesLoading) return
+
+    setMessagesLoading(true)
 
     try {
-      const response = await fetch(`/api/chats/${chat.id}/messages`, {
+      const response = await fetch(`/api/chats/${chat.id}/messages?page=${pageNum}&limit=50`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       })
+
       if (response.ok) {
         const data = await response.json()
-        setMessages(data)
+
+        if (append) {
+          setMessages((prev) => [...data.messages, ...prev])
+        } else {
+          setMessages(data.messages || [])
+          setShouldScrollToBottom(true)
+        }
+
+        setHasMore(data.hasMore || false)
+        setPage(pageNum)
       }
     } catch (error) {
       console.error("Failed to load messages:", error)
+      toast.error("Erro ao carregar mensagens")
+    } finally {
+      setMessagesLoading(false)
+    }
+  }
+
+  const loadMoreMessages = () => {
+    if (hasMore && !messagesLoading) {
+      loadMessages(page + 1, true)
     }
   }
 
   useEffect(() => {
     if (chat) {
-      loadMessages()
+      setMessages([])
+      setPage(1)
+      setHasMore(true)
+      loadMessages(1, false)
       loadUsers()
     } else {
       setMessages([])
     }
-  }, [chat, lastPusherEvent])
+  }, [chat])
+
+  // Atualizar mensagens quando receber eventos do Pusher
+  useEffect(() => {
+    if (chat && lastPusherEvent) {
+      loadMessages(1, false)
+    }
+  }, [lastPusherEvent])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (shouldScrollToBottom && scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight
+        setShouldScrollToBottom(false)
+      }
+    }
+  }, [messages, shouldScrollToBottom])
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    setShouldScrollToBottom(true)
   }
 
   const loadUsers = async () => {
@@ -102,91 +163,105 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   }
 
   const sendMessage = async (file?: File) => {
-    if ((!newMessage.trim() && !file) || !chat || loading) return;
-  
-    setLoading(true);
-  
-    const optimisticId = `temp-${Date.now()}`;
-    let optimisticMessage: Message;
-  
+    if ((!newMessage.trim() && !file) || !chat || loading) return
+
+    setLoading(true)
+    const optimisticId = `temp-${Date.now()}`
+
+    let optimisticMessage: Message
+
     if (file) {
       optimisticMessage = {
         id: optimisticId,
         content: `Enviando ${file.name}...`,
         sender: "agent",
-        type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'document',
-        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        mediaUrl: URL.createObjectURL(file)
-      };
+        type: file.type.startsWith("image/")
+          ? "image"
+          : file.type.startsWith("audio/")
+            ? "audio"
+            : file.type.startsWith("video/")
+              ? "video"
+              : file.type.includes("location") || file.name.includes("location")
+                ? "location"
+                : "document",
+        timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        mediaUrl: URL.createObjectURL(file),
+        hasMedia: true,
+      }
     } else {
       optimisticMessage = {
         id: optimisticId,
         content: newMessage,
         sender: "agent",
         type: "text",
-        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      };
-    }
-  
-    setMessages(prev => [...prev, optimisticMessage]);
-    setNewMessage("");
-  
-    try {
-      const formData = new FormData();
-      if (file) {
-        formData.append('file', file);
-        formData.append('caption', newMessage);
+        timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        hasMedia: false,
       }
-  
-      const endpoint = file ? `/api/messages/${chat.id}/send-media` : `/api/messages/${chat.id}/send`;
-  
+    }
+
+    setMessages((prev) => [...prev, optimisticMessage])
+    setNewMessage("")
+    setShouldScrollToBottom(true)
+
+    try {
+      const formData = new FormData()
+      if (file) {
+        formData.append("file", file)
+        formData.append("caption", newMessage)
+      }
+
+      const endpoint = file ? `/api/messages/${chat.id}/send-media` : `/api/messages/${chat.id}/send`
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
-          ...(!file && {"Content-Type": "application/json"})
+          ...(!file && { "Content-Type": "application/json" }),
         },
         body: file ? formData : JSON.stringify({ message: optimisticMessage.content }),
-      });
-  
-      const responseData = await response.json();
-  
+      })
+
+      const responseData = await response.json()
+
       if (response.ok) {
-        toast.success("Mensagem enviada com sucesso");
-        setMessages(prev => prev.map(msg => 
-            msg.id === optimisticId ? { ...msg, id: responseData.data.key.id } : msg
-        ));
-        onChatUpdate();
+        toast.success("Mensagem enviada com sucesso")
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === optimisticId ? { ...msg, id: responseData.data.key.id } : msg)),
+        )
+        onChatUpdate()
       } else {
-        throw new Error(responseData.error || "Falha ao enviar mensagem.");
+        throw new Error(responseData.error || "Falha ao enviar mensagem.")
       }
     } catch (error) {
-      console.error("Failed to send message:", error);
-      toast.error(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      setMessages(prev => prev.filter(m => m.id !== optimisticId));
-      if (!file) setNewMessage(optimisticMessage.content);
+      console.error("Failed to send message:", error)
+      toast.error(`Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
+      if (!file) setNewMessage(optimisticMessage.content)
     } finally {
-      setLoading(false);
+      setLoading(false)
       if (file && optimisticMessage.mediaUrl) {
-        URL.revokeObjectURL(optimisticMessage.mediaUrl);
+        URL.revokeObjectURL(optimisticMessage.mediaUrl)
       }
     }
-  };
+  }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0]
     if (file) {
-      sendMessage(file);
+      sendMessage(file)
     }
-    // Limpa o valor do input para permitir selecionar o mesmo arquivo novamente
-    if(event.target) {
-      event.target.value = "";
+    if (event.target) {
+      event.target.value = ""
     }
-  };
+  }
+
+  const handleImageClick = (src: string, alt: string, caption?: string) => {
+    setSelectedImage({ src, alt, caption })
+    setShowImageViewer(true)
+  }
 
   const transferChat = async (userId: string) => {
     if (!chat) return
-
     try {
       const response = await fetch(`/api/chats/${chat.id}/transfer`, {
         method: "POST",
@@ -196,7 +271,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         },
         body: JSON.stringify({ userId }),
       })
-
       if (response.ok) {
         onChatUpdate()
         toast.success("Conversa transferida com sucesso")
@@ -209,7 +283,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
   const updateChatStatus = async (status: "active" | "waiting" | "closed") => {
     if (!chat) return
-
     try {
       const response = await fetch(`/api/chats/${chat.id}/status`, {
         method: "PATCH",
@@ -219,7 +292,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         },
         body: JSON.stringify({ status }),
       })
-
       if (response.ok) {
         onChatUpdate()
         toast.success("Status atualizado com sucesso")
@@ -278,11 +350,16 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center shadow-sm">
-            {chat.profilePicUrl ? (
-                <img src={chat.profilePicUrl} alt="Foto de Perfil" className="w-10 h-10 rounded-lg object-cover"/>
-            ) : (
+              {chat.profilePicUrl ? (
+                <img
+                  src={chat.profilePicUrl || "/placeholder.svg"}
+                  alt="Foto de Perfil"
+                  className="w-10 h-10 rounded-lg object-cover"
+                  loading="lazy"
+                />
+              ) : (
                 <User className="h-5 w-5 text-white" />
-            )}
+              )}
             </div>
             <div>
               <CardTitle className="text-base font-semibold">{chat.contact}</CardTitle>
@@ -311,7 +388,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
               </div>
             </div>
           </div>
-
           <div className="flex items-center space-x-2">
             <Select onValueChange={transferChat}>
               <SelectTrigger className="w-32 h-8 text-xs border-purple-200 dark:border-purple-800">
@@ -325,7 +401,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 ))}
               </SelectContent>
             </Select>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -355,61 +430,150 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden relative">
         <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full scrollbar-thin">
-          <div className="p-4 space-y-3">
-            {messages.map((message) => (
+          <ScrollArea ref={scrollAreaRef} className="h-full scrollbar-thin">
+            <div className="p-4 space-y-3">
+              {/* Botão para carregar mensagens anteriores */}
+              {hasMore && (
+                <div className="text-center">
+                  <Button
+                    onClick={loadMoreMessages}
+                    disabled={messagesLoading}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-transparent"
+                  >
+                    {messagesLoading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        Carregando...
+                      </>
+                    ) : (
+                      "Carregar mensagens anteriores"
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Lista de mensagens otimizada */}
+              {messages.map((message) => (
                 <div
-                key={message.id}
-                className={`flex ${message.sender === "agent" ? "justify-end" : "justify-start"}`}
+                  key={message.id}
+                  className={`flex ${message.sender === "agent" ? "justify-end" : "justify-start"}`}
                 >
-                <div
+                  <div
                     className={cn(
-                    "max-w-xs lg:max-w-md px-3 py-2 rounded-lg shadow-sm text-sm",
-                    message.sender === "agent"
+                      "max-w-xs lg:max-w-md px-3 py-2 rounded-lg shadow-sm text-sm",
+                      message.sender === "agent"
                         ? "gradient-purple text-white shadow-purple/20"
                         : "bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900/50",
                     )}
-                >
-                    {message.type === 'image' && message.mediaUrl && (
-                        <img src={message.mediaUrl} alt={message.content || 'Imagem'} className="rounded-lg mb-2 max-w-full h-auto" />
-                    )}
-                    {message.type === 'audio' && message.mediaUrl && (
-                        <audio controls src={message.mediaUrl} className="w-full h-10" />
-                    )}
-                    {message.type === 'document' && message.mediaUrl && (
-                        <a 
-                            href={message.mediaUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            download={message.content || 'documento'}
-                            className="flex items-center gap-2 p-2 bg-black/10 rounded-md hover:bg-black/20 transition-colors"
-                        >
-                            <Paperclip className="h-4 w-4" />
-                            <span className="underline">{message.content || 'Baixar Documento'}</span>
-                        </a>
-                    )}
-                    
-                    {message.content && <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>}
-                    
-                    <p
-                        className={cn(
-                            "text-xs mt-1 text-right",
-                            message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
+                  >
+                    {/* Renderização otimizada de mídia */}
+                    {message.hasMedia && message.type !== "text" ? (
+                      <div className="mb-2">
+                        {message.mediaUrl ? (
+                          // Mídia já carregada (mensagem otimista)
+                          <>
+                            {message.type === "image" && (
+                              <img
+                                src={message.mediaUrl || "/placeholder.svg"}
+                                alt={message.content || "Imagem"}
+                                className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() =>
+                                  handleImageClick(message.mediaUrl!, message.content || "Imagem", message.content)
+                                }
+                              />
+                            )}
+                            {message.type === "audio" && (
+                              <audio controls src={message.mediaUrl} className="w-full h-10" />
+                            )}
+                            {message.type === "video" && (
+                              <video src={message.mediaUrl} controls className="w-full max-h-64 rounded-lg" />
+                            )}
+                            {message.type === "location" && (
+                              <div className="flex items-center gap-2 p-2 bg-black/10 rounded-md">
+                                <MapPin className="h-4 w-4" />
+                                <span>Localização compartilhada</span>
+                                {message.mediaUrl && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => window.open(message.mediaUrl, "_blank")}
+                                    className="p-0 h-auto ml-auto"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                            {message.type === "document" && (
+                              <a
+                                href={message.mediaUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={message.content || "documento"}
+                                className="flex items-center gap-2 p-2 bg-black/10 rounded-md hover:bg-black/20 transition-colors"
+                              >
+                                <Paperclip className="h-4 w-4" />
+                                <span className="underline">{message.content || "Baixar Documento"}</span>
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          // Lazy loading de mídia
+                          <MessageMedia
+                            messageId={message.id}
+                            chatId={chat.id}
+                            type={message.type}
+                            content={message.content}
+                          />
                         )}
-                    >
-                        {message.timestamp}
-                    </p>
-                </div>
-                </div>
-            ))}
-            <div ref={messagesEndRef} />
-            </div>
+                      </div>
+                    ) : null}
 
+                    {/* Conteúdo da mensagem */}
+                    {message.content && message.type === "text" && (
+                      <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                    )}
+
+                    {/* Timestamp */}
+                    <p
+                      className={cn(
+                        "text-xs mt-1 text-right",
+                        message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
+                      )}
+                    >
+                      {message.timestamp}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Loading inicial */}
+              {messagesLoading && page === 1 && (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
           </ScrollArea>
         </div>
 
+        {/* Botão para scroll para baixo */}
+        <Button
+          onClick={scrollToBottom}
+          className="absolute bottom-20 right-4 rounded-full w-10 h-10 p-0 shadow-lg z-10"
+          variant="secondary"
+          size="sm"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+
+        {/* Área de input */}
         <div className="border-t border-purple-200/30 dark:border-purple-800/30 p-4 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
           <div className="flex items-end space-x-2">
             <div className="flex-1">
@@ -424,6 +588,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                   }
                 }}
                 className="min-h-[40px] max-h-24 resize-none text-sm bg-white/80 dark:bg-gray-800/80 border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600 rounded-lg"
+                disabled={loading}
               />
             </div>
             <div className="flex space-x-1">
@@ -433,25 +598,35 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 size="sm"
                 className="h-8 w-8 p-0 gradient-purple hover:opacity-90 shadow-sm"
               >
-                <Send className="h-3 w-3" />
+                {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
                 onClick={() => fileInputRef.current?.click()}
-                >
+                disabled={loading}
+              >
                 <Paperclip className="h-3 w-3" />
               </Button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileSelect}
-                className="hidden" 
-              />
+              <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
             </div>
           </div>
         </div>
+
+        {/* Image Viewer Modal */}
+        {selectedImage && (
+          <ImageViewer
+            src={selectedImage.src || "/placeholder.svg"}
+            alt={selectedImage.alt}
+            caption={selectedImage.caption}
+            isOpen={showImageViewer}
+            onClose={() => {
+              setShowImageViewer(false)
+              setSelectedImage(null)
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   )
