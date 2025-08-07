@@ -36,9 +36,6 @@ export async function POST(request: Request, context : RouterContext) : Promise<
 
     const evolutionData = await evolutionResponse.json()
 
-    // Em produção, salvar mensagem no banco de dados
-    console.log("Message sent:", evolutionData)
-
     return NextResponse.json({ success: true, data: evolutionData })
   } catch (error) {
     console.error("Failed to send message:", error)

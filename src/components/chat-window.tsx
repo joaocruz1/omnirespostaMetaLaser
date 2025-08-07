@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,12 +23,14 @@ import {
   ChevronDown,
   MapPin,
   ExternalLink,
+  CheckCheck,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { MessageMedia } from "./message-media"
 import { ImageViewer } from "./image-viewer"
+import Pusher from "pusher-js"
 
 interface Chat {
   id: string
@@ -50,6 +51,7 @@ interface Message {
   timestamp: string
   hasMedia?: boolean
   mediaUrl?: string
+  status?: "ERROR" | "PENDING" | "SERVER_ACK" | "DELIVERY_ACK" | "READ" | "PLAYED"
 }
 
 interface ChatWindowProps {
@@ -111,6 +113,47 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     if (hasMore && !messagesLoading) {
       loadMessages(page + 1, true)
     }
+  }
+
+  // Atualizar status da mensagem com Pusher
+  useEffect(() => {
+    if (!chat) return
+
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    })
+
+    const channel = pusher.subscribe('chat-updates')
+
+    const handleStatusUpdate = (data: { id: string; status: Message['status'] }) => {
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === data.id ? { ...msg, status: data.status } : msg
+        )
+      )
+    }
+
+    channel.bind('message-status-update', handleStatusUpdate)
+
+    return () => {
+      channel.unbind('message-status-update', handleStatusUpdate)
+      channel.unsubscribe()
+      pusher.disconnect()
+    }
+  }, [chat])
+
+  // Função para renderizar o ícone de status
+  const MessageStatus = ({ status }: { status: Message['status'] }) => {
+    if (!status) return null
+
+    let color = "text-gray-400"
+    if (status === "READ" || status === "PLAYED") {
+      color = "text-blue-500"
+    } else if (status === "DELIVERY_ACK") {
+      color = "text-gray-500"
+    }
+
+    return <CheckCheck className={`h-4 w-4 ml-1 ${color}`} />
   }
 
   useEffect(() => {
@@ -187,6 +230,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
         mediaUrl: URL.createObjectURL(file),
         hasMedia: true,
+        status: "PENDING",
       }
     } else {
       optimisticMessage = {
@@ -196,6 +240,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         type: "text",
         timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
         hasMedia: false,
+        status: "PENDING",
       }
     }
 
@@ -538,15 +583,18 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                       <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                     )}
 
-                    {/* Timestamp */}
-                    <p
-                      className={cn(
-                        "text-xs mt-1 text-right",
-                        message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
-                      )}
-                    >
-                      {message.timestamp}
-                    </p>
+                    {/* Timestamp e Status */}
+                    <div className="flex items-center justify-end">
+                      <p
+                        className={cn(
+                          "text-xs mt-1",
+                          message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
+                        )}
+                      >
+                        {message.timestamp}
+                      </p>
+                      {message.sender === "agent" && <MessageStatus status={message.status} />}
+                    </div>
                   </div>
                 </div>
               ))}
