@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../generate'
 
 // Ensure the PrismaClient is a singleton in development to avoid
 // exhausting database connections due to hot reloading in Next.js
