@@ -24,6 +24,9 @@ import {
   MapPin,
   ExternalLink,
   CheckCheck,
+  Check,
+  Clock,
+  AlertCircle,
   Bot,
   BotOff,
 } from "lucide-react"
@@ -73,6 +76,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string; caption?: string } | null>(null)
@@ -190,16 +194,21 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
   // Função para renderizar o ícone de status
   const MessageStatus = ({ status }: { status: Message['status'] }) => {
-    if (!status) return null
-
-    let color = "text-gray-400"
-    if (status === "READ" || status === "PLAYED") {
-      color = "text-blue-500"
-    } else if (status === "DELIVERY_ACK") {
-      color = "text-gray-500"
+    switch (status) {
+      case "PENDING":
+        return <Clock className="h-4 w-4 ml-1 text-gray-400" />
+      case "SERVER_ACK":
+        return <Check className="h-4 w-4 ml-1 text-gray-400" />
+      case "DELIVERY_ACK":
+        return <CheckCheck className="h-4 w-4 ml-1 text-gray-500" />
+      case "READ":
+      case "PLAYED":
+        return <CheckCheck className="h-4 w-4 ml-1 text-blue-500" />
+      case "ERROR":
+        return <AlertCircle className="h-4 w-4 ml-1 text-red-500" />
+      default:
+        return null
     }
-
-    return <CheckCheck className={`h-4 w-4 ml-1 ${color}`} />
   }
 
   useEffect(() => {
@@ -257,13 +266,15 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     resetInactivityTimer()
     setLoading(true)
     const optimisticId = `temp-${Date.now()}`
+    const messageText = newMessage
+    setNewMessage("")
 
     let optimisticMessage: Message
 
     if (file) {
       optimisticMessage = {
         id: optimisticId,
-        content: `Enviando ${file.name}...`,
+        content: messageText || file.name,
         sender: "agent",
         type: file.type.startsWith("image/")
           ? "image"
@@ -282,7 +293,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     } else {
       optimisticMessage = {
         id: optimisticId,
-        content: newMessage,
+        content: messageText,
         sender: "agent",
         type: "text",
         timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
@@ -292,14 +303,13 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     }
 
     setMessages((prev) => [...prev, optimisticMessage])
-    setNewMessage("")
     setShouldScrollToBottom(true)
 
     try {
       const formData = new FormData()
       if (file) {
         formData.append("file", file)
-        formData.append("caption", newMessage)
+        formData.append("caption", messageText)
       }
 
       const endpoint = file ? `/api/messages/${chat.id}/send-media` : `/api/messages/${chat.id}/send`
@@ -310,15 +320,18 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           ...(!file && { "Content-Type": "application/json" }),
         },
-        body: file ? formData : JSON.stringify({ message: optimisticMessage.content }),
+        body: file ? formData : JSON.stringify({ message: messageText }),
       })
 
       const responseData = await response.json()
 
       if (response.ok) {
-        toast.success("Mensagem enviada com sucesso")
         setMessages((prev) =>
-          prev.map((msg) => (msg.id === optimisticId ? { ...msg, id: responseData.data.key.id } : msg)),
+          prev.map((msg) =>
+            msg.id === optimisticId
+              ? { ...msg, id: responseData.data.key.id, status: "SERVER_ACK" }
+              : msg,
+          ),
         )
         onChatUpdate()
       } else {
@@ -328,12 +341,13 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       console.error("Failed to send message:", error)
       toast.error(`Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-      if (!file) setNewMessage(optimisticMessage.content)
+      setNewMessage(messageText)
     } finally {
       setLoading(false)
       if (file && optimisticMessage.mediaUrl) {
         URL.revokeObjectURL(optimisticMessage.mediaUrl)
       }
+      textareaRef.current?.focus()
     }
   }
 
@@ -701,6 +715,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
           <div className="flex items-end space-x-2">
             <div className="flex-1">
               <Textarea
+                ref={textareaRef}
                 placeholder="Digite sua mensagem..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
