@@ -24,6 +24,8 @@ import {
   MapPin,
   ExternalLink,
   CheckCheck,
+  Bot,
+  BotOff,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
@@ -76,6 +78,21 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string; caption?: string } | null>(null)
   const { user } = useAuth()
 
+  const [isAiEnabled, setIsAiEnabled] = useState(true)
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const resetInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current)
+    }
+    if (!isAiEnabled) {
+      inactivityTimerRef.current = setTimeout(() => {
+        setIsAiEnabled(true)
+        toast.info("Agente IA reativado após 20 minutos de inatividade.")
+      }, 20 * 60 * 1000)
+    }
+  }
+
   const loadMessages = async (pageNum = 1, append = false) => {
     if (!chat || messagesLoading) return
 
@@ -114,6 +131,35 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       loadMessages(page + 1, true)
     }
   }
+
+  useEffect(() => {
+    if (chat) {
+      const stored = localStorage.getItem(`ai-enabled-${chat.id}`)
+      setIsAiEnabled(stored !== "false")
+    }
+  }, [chat])
+
+  useEffect(() => {
+    if (chat) {
+      localStorage.setItem(`ai-enabled-${chat.id}`, String(isAiEnabled))
+    }
+    if (isAiEnabled) {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current)
+        inactivityTimerRef.current = null
+      }
+    } else {
+      resetInactivityTimer()
+    }
+  }, [isAiEnabled, chat])
+
+  useEffect(() => {
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current)
+      }
+    }
+  }, [])
 
   // Atualizar status da mensagem com Pusher
   useEffect(() => {
@@ -208,6 +254,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const sendMessage = async (file?: File) => {
     if ((!newMessage.trim() && !file) || !chat || loading) return
 
+    resetInactivityTimer()
     setLoading(true)
     const optimisticId = `temp-${Date.now()}`
 
@@ -446,6 +493,34 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = !isAiEnabled
+                setIsAiEnabled(next)
+                if (next) {
+                  toast.success("Agente IA ativado")
+                } else {
+                  toast.info(
+                    "Agente IA desativado. Será reativado automaticamente após 20 minutos de inatividade.",
+                  )
+                }
+              }}
+              className={cn(
+                "h-8 px-2",
+                isAiEnabled
+                  ? "border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                  : "bg-red-500 text-white border-red-500 hover:bg-red-600",
+              )}
+            >
+              {isAiEnabled ? (
+                <Bot className="h-3 w-3 mr-1" />
+              ) : (
+                <BotOff className="h-3 w-3 mr-1" />
+              )}
+              {isAiEnabled ? "IA Ativa" : "IA Inativa"}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
