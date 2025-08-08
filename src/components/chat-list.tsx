@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, RefreshCw, User, Clock, MessageCircle } from "lucide-react"
+import { Search, RefreshCw, User, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Chat {
@@ -136,15 +136,15 @@ export function ChatList({
                   <div
                     key={chat.id}
                     className={cn(
-                      "p-3 cursor-pointer rounded-lg transition-all duration-200 border border-transparent hover:border-purple-200/50 dark:hover:border-purple-800/50",
+                      "p-3 cursor-pointer transition-colors border-b last:border-b-0 border-purple-100 dark:border-purple-900/50",
                       selectedChat?.id === chat.id
-                        ? "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 shadow-sm"
-                        : "hover:bg-white/80 dark:hover:bg-gray-800/50",
+                        ? "bg-purple-50 dark:bg-purple-950/30"
+                        : "hover:bg-purple-50 dark:hover:bg-purple-950/20",
                     )}
                     onClick={() => onSelectChat(chat)}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-shrink-0 mr-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
                         {chat.profilePicUrl ? (
                           <img
                             src={chat.profilePicUrl || "/placeholder.svg"}
@@ -159,12 +159,18 @@ export function ChatList({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
+                        <div className="flex items-center justify-between">
                           <p className="font-medium text-sm truncate text-foreground">{chat.contact}</p>
+                          <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-muted-foreground truncate flex-1">
+                            {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
+                          </p>
                           {newMessagesCount && newMessagesCount > 0 ? (
                             <Badge
                               variant="destructive"
-                              className="ml-auto flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600"
+                              className="ml-2 flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600"
                             >
                               {newMessagesCount}
                             </Badge>
@@ -172,28 +178,19 @@ export function ChatList({
                             chat.unreadCount > 0 && (
                               <Badge
                                 variant="destructive"
-                                className="ml-auto flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600"
+                                className="ml-2 flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600"
                               >
                                 {chat.unreadCount}
                               </Badge>
                             )
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground truncate mb-2 leading-relaxed">
-                          {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            <span>{chat.timestamp}</span>
+                        {chat.assignedTo && (
+                          <div className="flex items-center space-x-1 text-[11px] text-muted-foreground mt-1">
+                            <User className="h-3 w-3" />
+                            <span className="truncate max-w-16">{chat.assignedTo}</span>
                           </div>
-                          {chat.assignedTo && (
-                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              <span className="truncate max-w-16">{chat.assignedTo}</span>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>

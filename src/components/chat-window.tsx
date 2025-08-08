@@ -598,10 +598,10 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 >
                   <div
                     className={cn(
-                      "max-w-xs lg:max-w-md px-3 py-2 rounded-lg shadow-sm text-sm",
+                      "max-w-xs lg:max-w-md px-3 py-2 rounded-2xl shadow-sm text-sm relative",
                       message.sender === "agent"
-                        ? "gradient-purple text-white shadow-purple/20"
-                        : "bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900/50",
+                        ? "gradient-purple text-white shadow-purple/20 rounded-br-none"
+                        : "bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900/50 rounded-bl-none",
                     )}
                   >
                     {/* Renderização otimizada de mídia */}
@@ -725,7 +725,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                     sendMessage()
                   }
                 }}
-                className="min-h-[40px] max-h-24 resize-none text-sm bg-white/80 dark:bg-gray-800/80 border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600 rounded-lg"
+                className="min-h-[40px] max-h-24 resize-none text-sm bg-white dark:bg-gray-800 border border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600 rounded-full px-4 py-2"
                 disabled={loading}
               />
             </div>
@@ -734,14 +734,14 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 onClick={() => sendMessage()}
                 disabled={loading || !newMessage.trim()}
                 size="sm"
-                className="h-8 w-8 p-0 gradient-purple hover:opacity-90 shadow-sm"
+                className="h-8 w-8 p-0 rounded-full gradient-purple hover:opacity-90 shadow-sm"
               >
                 {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                className="h-8 w-8 p-0 rounded-full border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
               >
