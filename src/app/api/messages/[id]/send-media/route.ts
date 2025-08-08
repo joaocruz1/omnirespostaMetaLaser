@@ -29,26 +29,24 @@ export async function POST(request: Request, context: RouterContext): Promise<Ne
     else if (file.type.startsWith("audio/")) mediatype = "audio"
     else if (file.type.startsWith("video/")) mediatype = "video"
 
-    const evolutionResponse = await fetch(`${EVOLUTION_API_BASE_URL}/message/sendMedia/${INSTANCE_NAME}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(EVOLUTION_API_KEY ? { apikey: EVOLUTION_API_KEY } : {}),
-      },
-      body: JSON.stringify({
-        number: phoneNumber,
-        options: {
-          delay: 123,
-          presence: "composing",
+    const evolutionResponse = await fetch(
+      `${EVOLUTION_API_BASE_URL}/message/sendMedia/${INSTANCE_NAME}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(EVOLUTION_API_KEY ? { apikey: EVOLUTION_API_KEY } : {}),
         },
-        mediaMessage: {
+        body: JSON.stringify({
+          number: phoneNumber,
           mediatype,
+          mimetype: file.type,
           caption,
-          fileName: file.name,
           media: base64,
-        },
-      }),
-    })
+          fileName: file.name,
+        }),
+      }
+    )
 
     if (!evolutionResponse.ok) {
       const errorText = await evolutionResponse.text()
