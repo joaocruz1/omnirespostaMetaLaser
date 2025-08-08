@@ -23,6 +23,7 @@ import {
   ChevronDown,
   MapPin,
   ExternalLink,
+  Check,
   CheckCheck,
   Bot,
   BotOff,
@@ -59,10 +60,9 @@ interface Message {
 interface ChatWindowProps {
   chat: Chat | null
   onChatUpdate: () => void
-  lastPusherEvent: any
 }
 
-export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowProps) {
+export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(false)
@@ -161,7 +161,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     }
   }, [])
 
-  // Atualizar status da mensagem com Pusher
+  // Atualizações em tempo real via Pusher
   useEffect(() => {
     if (!chat) return
 
@@ -171,7 +171,8 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
     const channel = pusher.subscribe('chat-updates')
 
-    const handleStatusUpdate = (data: { id: string; status: Message['status'] }) => {
+    const handleStatusUpdate = (data: { id: string; status: Message['status']; chatId: string }) => {
+      if (data.chatId !== chat.id) return
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.id === data.id ? { ...msg, status: data.status } : msg
@@ -179,10 +180,18 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       )
     }
 
+    const handleChatEvent = (data: { event: string; chatId: string }) => {
+      if (data.chatId === chat.id && data.event === 'messages.upsert') {
+        loadMessages(1, false)
+      }
+    }
+
     channel.bind('message-status-update', handleStatusUpdate)
+    channel.bind('chat-event', handleChatEvent)
 
     return () => {
       channel.unbind('message-status-update', handleStatusUpdate)
+      channel.unbind('chat-event', handleChatEvent)
       channel.unsubscribe()
       pusher.disconnect()
     }
@@ -192,14 +201,23 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const MessageStatus = ({ status }: { status: Message['status'] }) => {
     if (!status) return null
 
-    let color = "text-gray-400"
-    if (status === "READ" || status === "PLAYED") {
-      color = "text-blue-500"
-    } else if (status === "DELIVERY_ACK") {
-      color = "text-gray-500"
+    if (status === "PENDING") {
+      return <Loader2 className="h-4 w-4 ml-1 animate-spin text-gray-400" />
     }
 
-    return <CheckCheck className={`h-4 w-4 ml-1 ${color}`} />
+    if (status === "SERVER_ACK") {
+      return <Check className="h-4 w-4 ml-1 text-gray-500" />
+    }
+
+    if (status === "DELIVERY_ACK") {
+      return <CheckCheck className="h-4 w-4 ml-1 text-gray-500" />
+    }
+
+    if (status === "READ" || status === "PLAYED") {
+      return <CheckCheck className="h-4 w-4 ml-1 text-blue-500" />
+    }
+
+    return null
   }
 
   useEffect(() => {
@@ -213,13 +231,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       setMessages([])
     }
   }, [chat])
-
-  // Atualizar mensagens quando receber eventos do Pusher
-  useEffect(() => {
-    if (chat && lastPusherEvent) {
-      loadMessages(1, false)
-    }
-  }, [lastPusherEvent])
 
   useEffect(() => {
     if (shouldScrollToBottom && scrollAreaRef.current) {

@@ -29,7 +29,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
-  const [lastPusherEvent, setLastPusherEvent] = useState<any>(null);
   // Estado para controlar as notificações de chats não lidos (agora um Map)
   const [unreadChats, setUnreadChats] = useState<Map<string, number>>(new Map());
 
@@ -76,9 +75,8 @@ export default function DashboardPage() {
 
     channel.bind('chat-event', (data: any) => {
       console.log("Pusher event received, reloading UI:", data);
-      
+
       loadChats();
-      setLastPusherEvent(data);
 
       // Lógica para incrementar a contagem de notificações
       if (data.event === 'messages.upsert' && data.data?.messages?.[0]) {
@@ -193,10 +191,9 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="lg:col-span-2 min-h-0">
-                  <ChatWindow 
-                    chat={selectedChat} 
-                    onChatUpdate={loadChats} 
-                    lastPusherEvent={lastPusherEvent} 
+                  <ChatWindow
+                    chat={selectedChat}
+                    onChatUpdate={loadChats}
                   />
                 </div>
               </div>
