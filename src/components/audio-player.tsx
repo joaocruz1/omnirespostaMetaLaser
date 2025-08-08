@@ -34,11 +34,18 @@ export function AudioPlayer({ src, title, isOpen, onClose, caption }: AudioPlaye
       setCurrentTime(0)
       setError(null)
       setIsLoading(true)
+      // Ensure the audio element reloads when the dialog opens
+      if (audioRef.current) {
+        audioRef.current.load()
+      }
+    } else if (audioRef.current) {
+      audioRef.current.pause()
     }
   }, [isOpen])
 
   // Audio event listeners
   useEffect(() => {
+    if (!isOpen) return
     const audio = audioRef.current
     if (!audio) return
 
@@ -80,7 +87,7 @@ export function AudioPlayer({ src, title, isOpen, onClose, caption }: AudioPlaye
       audio.removeEventListener("error", handleError)
       audio.removeEventListener("canplay", handleCanPlay)
     }
-  }, [isLooping])
+  }, [isOpen, isLooping, src])
 
   // Keyboard shortcuts
   useEffect(() => {
