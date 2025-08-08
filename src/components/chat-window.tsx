@@ -73,6 +73,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string; caption?: string } | null>(null)
@@ -292,7 +293,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     }
 
     setMessages((prev) => [...prev, optimisticMessage])
-    setNewMessage("")
     setShouldScrollToBottom(true)
 
     try {
@@ -316,7 +316,6 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       const responseData = await response.json()
 
       if (response.ok) {
-        toast.success("Mensagem enviada com sucesso")
         setMessages((prev) =>
           prev.map((msg) => (msg.id === optimisticId ? { ...msg, id: responseData.data.key.id } : msg)),
         )
@@ -334,6 +333,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       if (file && optimisticMessage.mediaUrl) {
         URL.revokeObjectURL(optimisticMessage.mediaUrl)
       }
+      textareaRef.current?.focus()
     }
   }
 
@@ -701,6 +701,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
           <div className="flex items-end space-x-2">
             <div className="flex-1">
               <Textarea
+                ref={textareaRef}
                 placeholder="Digite sua mensagem..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
