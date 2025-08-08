@@ -12,6 +12,7 @@ import { ChatList } from "@/components/chat-list";
 import { ChatWindow } from "@/components/chat-window";
 import { UserManagement } from "@/components/user-management";
 import { InstanceSettings } from "@/components/instance-setting";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface Chat {
   id: string;
@@ -136,6 +137,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-foreground">Olá, {user.name}</p>
                 <p className="text-xs text-muted-foreground">Bem-vindo de volta</p>
               </div>
+              <ThemeToggle />
               <Button
                 variant="outline"
                 size="sm"
