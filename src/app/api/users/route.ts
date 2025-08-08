@@ -1,28 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-
-// Mock users database
-const users = [
-  {
-    id: "1",
-    name: "Admin",
-    email: "admin@metalaser.com",
-    role: "admin",
-    status: "active",
-    createdAt: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: "2",
-    name: "Agente 1",
-    email: "agente1@metalaser.com",
-    role: "agent",
-    status: "active",
-    createdAt: "2024-01-01T00:00:00Z",
-  },
-]
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+      },
+    })
     return NextResponse.json(users)
   } catch (error) {
     console.error("Failed to fetch users:", error)
@@ -34,24 +25,29 @@ export async function POST(request: NextRequest) {
   try {
     const { name, email, password, role } = await request.json()
 
-    // Verificar se email já existe
-    if (users.find((u) => u.email === email)) {
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
       return NextResponse.json({ error: "Email já está em uso" }, { status: 400 })
     }
 
-    // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const newUser = {
-      id: (users.length + 1).toString(),
-      name,
-      email,
-      role,
-      status: "active",
-      createdAt: new Date().toISOString(),
-    }
-
-    users.push(newUser)
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+      },
+    })
 
     return NextResponse.json(newUser, { status: 201 })
   } catch (error) {
