@@ -131,24 +131,36 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.ContactScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  number: 'number',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.ChatScalarFieldEnum = {
   id: 'id',
-  contact: 'contact',
-  lastMessage: 'lastMessage',
-  timestamp: 'timestamp',
-  unreadCount: 'unreadCount',
-  assignedTo: 'assignedTo',
   status: 'status',
-  profilePicUrl: 'profilePicUrl',
-  userId: 'userId'
+  lastMessage: 'lastMessage',
+  lastMessageAt: 'lastMessageAt',
+  unreadMessages: 'unreadMessages',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  assignedToId: 'assignedToId',
+  contactId: 'contactId'
 };
 
 exports.Prisma.MessageScalarFieldEnum = {
   id: 'id',
   chatId: 'chatId',
-  sender: 'sender',
+  type: 'type',
   content: 'content',
+  fromMe: 'fromMe',
+  timestamp: 'timestamp',
+  status: 'status',
   mediaUrl: 'mediaUrl',
+  quotedMsgId: 'quotedMsgId',
   createdAt: 'createdAt'
 };
 
@@ -170,6 +182,7 @@ exports.Prisma.NullsOrder = {
 
 exports.Prisma.ModelName = {
   User: 'User',
+  Contact: 'Contact',
   Chat: 'Chat',
   Message: 'Message'
 };

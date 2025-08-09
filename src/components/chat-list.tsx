@@ -11,7 +11,11 @@ import { cn } from "@/lib/utils"
 
 interface Chat {
   id: string
-  contact: string
+  contact: {
+    id: string
+    name: string | null
+    number: string
+  }
   lastMessage: any
   timestamp: string
   unreadCount: number
@@ -41,8 +45,8 @@ export function ChatList({
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
 
   const filteredChats = chats.filter((chat) => {
-    const contactMatch =
-      typeof chat.contact === "string" && chat.contact.toLowerCase().includes(searchTerm.toLowerCase())
+    const contactName = chat.contact.name || chat.contact.number
+    const contactMatch = contactName.toLowerCase().includes(searchTerm.toLowerCase())
     const messageMatch =
       typeof chat.lastMessage === "string" && chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSearch = contactMatch || messageMatch
@@ -160,7 +164,9 @@ export function ChatList({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm truncate text-foreground">{chat.contact}</p>
+                          <p className="font-medium text-sm truncate text-foreground">
+                            {chat.contact.name || chat.contact.number}
+                          </p>
                           <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
                         </div>
                         <div className="flex items-center justify-between mt-1">

@@ -16,12 +16,17 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 interface Chat {
   id: string;
-  contact: string;
+  contact: {
+    id: string;
+    name: string | null;
+    number: string;
+  };
   lastMessage: string;
   timestamp: string;
   unreadCount: number;
   assignedTo?: string;
   status: "active" | "waiting" | "closed";
+  profilePicUrl?: string;
 }
 
 export default function DashboardPage() {

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
 import {
   Send,
@@ -39,7 +40,11 @@ import Pusher from "pusher-js"
 
 interface Chat {
   id: string
-  contact: string
+  contact: {
+    id: string
+    name: string | null
+    number: string
+  }
   lastMessage: string
   timestamp: string
   unreadCount: number
@@ -84,6 +89,30 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
   const [isAiEnabled, setIsAiEnabled] = useState(true)
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [contactName, setContactName] = useState(
+    chat?.contact.name || chat?.contact.number || ""
+  )
+
+  const handleSaveContactName = async () => {
+    try {
+      const response = await fetch(`/api/contacts/${chat?.contact.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: contactName }),
+      })
+      if (!response.ok) throw new Error('Failed to save contact')
+      toast.success('Contato salvo com sucesso!')
+      onChatUpdate()
+    } catch (error) {
+      toast.error('Erro ao salvar o contato.')
+    }
+  }
+
+  useEffect(() => {
+    if (chat) {
+      setContactName(chat.contact.name || chat.contact.number)
+    }
+  }, [chat])
 
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) {
@@ -468,7 +497,16 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
               )}
             </div>
             <div>
-              <CardTitle className="text-base font-semibold">{chat.contact}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  className="text-base font-semibold"
+                />
+                <Button onClick={handleSaveContactName} size="sm">
+                  Salvar Contato
+                </Button>
+              </div>
               <div className="flex items-center space-x-2 mt-0.5">
                 <Badge variant="outline" className={cn("text-xs px-2 py-0 h-5", getStatusColor(chat.status))}>
                   <Circle

@@ -1,62 +1,77 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { pusherServer } from '@/lib/pusher';
 
-// Lista de eventos que devem acionar uma atualização no frontend.
-const RELEVANT_EVENTS = [
-  "messages.upsert",
-  "messages.update", // Evento para atualização de status
-  "contacts.update",
-  "chats.update",
-  "chats.delete",
-  "connection.update",
-];
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const webhookData = await request.json();
+    const body = await request.json();
+    const { data, instance } = body;
+    const { id, from, type, body: messageBody, fromMe, t: timestamp, status } = data;
 
-    if (RELEVANT_EVENTS.includes(webhookData.event)) {
-      const channelName = 'chat-updates';
+    const contactNumber = from.split('@')[0];
 
-      // Lógica específica para o evento de atualização de status da mensagem
-      if (webhookData.event === "messages.update") {
-        const eventName = 'message-status-update';
-        
-        // O `data` para `messages.update` é um array, então iteramos sobre ele
-        if (Array.isArray(webhookData.data)) {
-          for (const update of webhookData.data) {
-            // Verificação de segurança para garantir que a estrutura de dados é a esperada
-            if (update.key && update.key.id && update.update && update.update.status) {
-              const payload = {
-                id: update.key.id,
-                status: update.update.status,
-                chatId: update.key.remoteJid,
-              };
-              // Dispara um evento para cada atualização de status
-              await pusherServer.trigger(channelName, eventName, payload);
-              console.log(`Pusher event '${eventName}' triggered for message ${payload.id} with status ${payload.status}`);
-            }
-          }
-        }
-      } else {
-        // Lógica para os outros eventos
-        const eventName = 'chat-event';
-        const payload = {
-          event: webhookData.event,
-          chatId: webhookData.data?.key?.remoteJid || webhookData.data?.id,
-          timestamp: new Date().toISOString()
-        };
-        await pusherServer.trigger(channelName, eventName, payload);
-        console.log(`Pusher event '${eventName}' triggered on channel '${channelName}' for Evolution event '${webhookData.event}'`);
-      }
-    } else {
-      console.log(`Ignored webhook event: ${webhookData.event}`);
+    let contact = await prisma.contact.findUnique({
+      where: { number: contactNumber },
+    });
+
+    if (!contact) {
+      contact = await prisma.contact.create({
+        data: {
+          number: contactNumber,
+          name: data.pushName || contactNumber,
+        },
+      });
     }
 
-    return NextResponse.json({ success: true });
+    let chat = await prisma.chat.findFirst({
+      where: { contactId: contact.id },
+    });
 
+    if (!chat) {
+      chat = await prisma.chat.create({
+        data: {
+          contactId: contact.id,
+          lastMessage: messageBody,
+          lastMessageAt: new Date(timestamp * 1000),
+        },
+      });
+    } else {
+      chat = await prisma.chat.update({
+        where: { id: chat.id },
+        data: {
+          lastMessage: messageBody,
+          lastMessageAt: new Date(timestamp * 1000),
+          status: 'OPEN',
+          unreadMessages: {
+            increment: fromMe ? 0 : 1,
+          },
+        },
+      });
+    }
+
+    await prisma.message.create({
+      data: {
+        id: id,
+        chatId: chat.id,
+        content: messageBody,
+        fromMe: fromMe,
+        timestamp: new Date(timestamp * 1000),
+        type: type,
+        status: status,
+      },
+    });
+
+    await pusherServer.trigger('chats', 'chat:update', {
+      instance,
+      chatId: chat.id,
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Webhook processing error:", error);
-    return NextResponse.json({ error: "Erro ao processar webhook" }, { status: 500 });
+    console.error('Webhook processing error', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }

@@ -1,16 +1,40 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { prisma } from '@/lib/prisma';
+import { pusherServer } from '@/lib/pusher';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { userId } = await request.json()
-    const chatId = params.id
+    const chatId = params.id;
+    const { userId } = await request.json();
 
-    // Em produção, atualizar no banco de dados
-    console.log(`Transferring chat ${chatId} to user ${userId}`)
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
 
-    return NextResponse.json({ success: true })
+    const updatedChat = await prisma.chat.update({
+      where: {
+        id: chatId,
+      },
+      data: {
+        assignedToId: userId,
+      },
+      include: {
+        contact: true,
+        assignedTo: true,
+      },
+    });
+
+    await pusherServer.trigger('chats', 'chat:update', updatedChat);
+
+    return NextResponse.json(updatedChat);
   } catch (error) {
-    console.error("Failed to transfer chat:", error)
-    return NextResponse.json({ error: "Erro ao transferir conversa" }, { status: 500 })
+    console.error('Failed to transfer chat', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
