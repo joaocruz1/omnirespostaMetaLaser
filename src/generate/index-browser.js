@@ -131,9 +131,14 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.ContactScalarFieldEnum = {
+  id: 'id',
+  name: 'name'
+};
+
 exports.Prisma.ChatScalarFieldEnum = {
   id: 'id',
-  contact: 'contact',
+  contactId: 'contactId',
   lastMessage: 'lastMessage',
   timestamp: 'timestamp',
   unreadCount: 'unreadCount',
@@ -170,6 +175,7 @@ exports.Prisma.NullsOrder = {
 
 exports.Prisma.ModelName = {
   User: 'User',
+  Contact: 'Contact',
   Chat: 'Chat',
   Message: 'Message'
 };

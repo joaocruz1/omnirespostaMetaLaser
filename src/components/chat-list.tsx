@@ -1,13 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, RefreshCw, User, MessageCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, RefreshCw, User, MessageCircle, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Chat {
   id: string
@@ -39,6 +44,55 @@ export function ChatList({
 }: ChatListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
+  const [newContact, setNewContact] = useState({ contact: "", assignedTo: "" })
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("/api/users", {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setUsers(data)
+        }
+      } catch (err) {
+        console.error("Failed to load users", err)
+      }
+    }
+    loadUsers()
+  }, [])
+
+  const handleAddContact = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          id: newContact.contact,
+          contact: newContact.contact,
+          assignedTo: newContact.assignedTo,
+        }),
+      })
+      if (res.ok) {
+        toast.success("Contato adicionado")
+        setIsDialogOpen(false)
+        setNewContact({ contact: "", assignedTo: "" })
+        onRefresh()
+      } else {
+        toast.error("Falha ao adicionar contato")
+      }
+    } catch (err) {
+      console.error("Failed to add contact", err)
+      toast.error("Falha ao adicionar contato")
+    }
+  }
 
   const filteredChats = chats.filter((chat) => {
     const contactMatch =
@@ -58,15 +112,63 @@ export function ChatList({
             <MessageCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             <span>Conversas</span>
           </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="h-7 w-7 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
-          >
-            <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-white/95 dark:bg-gray-900/95">
+                <DialogHeader>
+                  <DialogTitle>Novo Contato</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleAddContact} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact">Número do contato</Label>
+                    <Input
+                      id="contact"
+                      value={newContact.contact}
+                      onChange={(e) => setNewContact({ ...newContact, contact: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="assignedTo">Designar para</Label>
+                    <Select
+                      value={newContact.assignedTo}
+                      onValueChange={(v) => setNewContact({ ...newContact, assignedTo: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um usuário" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.name}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="submit" className="w-full">Adicionar</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="h-7 w-7 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+            >
+              <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
         <div className="space-y-2">
           <div className="relative">
