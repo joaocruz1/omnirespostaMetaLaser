@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const localChats = await prisma.chat.findMany()
+    const localChats = await prisma.chat.findMany({
+      include: { contact: true },
+    })
     const chatMap = new Map(formattedChats.map((c) => [c.id, c]))
 
     for (const chat of localChats) {
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
       } else {
         chatMap.set(chat.id, {
           id: chat.id,
-          contact: chat.contact,
+          contact: chat.contact?.id || "",
           lastMessage: chat.lastMessage || "[Sem mensagens]",
           timestamp: chat.timestamp.toLocaleString("pt-BR"),
           unreadCount: chat.unreadCount || 0,
@@ -104,9 +106,15 @@ export async function POST(request: NextRequest) {
     const chat = await prisma.chat.create({
       data: {
         id,
-        contact,
+        contact: {
+          connectOrCreate: {
+            where: { id: contact },
+            create: { id: contact },
+          },
+        },
         assignedTo,
       },
+      include: { contact: true },
     })
 
     return NextResponse.json(chat, { status: 201 })

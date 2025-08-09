@@ -21,9 +21,16 @@ model User {
   chats     Chat[]   @relation("UserChats")
 }
 
+model Contact {
+  id    String  @id
+  name  String?
+  chats Chat[]
+}
+
 model Chat {
   id            String    @id
-  contact       String
+  contact       Contact   @relation(fields: [contactId], references: [id])
+  contactId     String
   lastMessage   String?
   timestamp     DateTime  @default(now())
   unreadCount   Int       @default(0)
