@@ -41,8 +41,11 @@ export default function DashboardPage() {
         },
       });
       if (response.ok) {
-        const data = await response.json();
+        const data: Chat[] = await response.json();
         setChats(data);
+        setSelectedChat((prev) =>
+          prev ? data.find((c) => c.id === prev.id) ?? prev : null
+        );
       }
     } catch (error) {
       console.error("Failed to load chats:", error);
