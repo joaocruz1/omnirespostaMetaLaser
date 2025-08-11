@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { pusherServer } from '@/lib/pusher';
+import { pusherServer } from "@/lib/pusher";
+import { prisma } from "@/lib/prisma";
 
 // Lista de eventos que devem acionar uma atualização no frontend.
 const RELEVANT_EVENTS = [
@@ -17,6 +18,58 @@ export async function POST(request: NextRequest) {
 
     if (RELEVANT_EVENTS.includes(webhookData.event)) {
       const channelName = 'chat-updates';
+      // Persistência de novos contatos/chats ao receber mensagens
+      if (webhookData.event === "messages.upsert" && Array.isArray(webhookData.data?.messages)) {
+        for (const msg of webhookData.data.messages) {
+          const remoteJid = msg.key?.remoteJid;
+          if (!remoteJid) continue;
+
+          const contactId = remoteJid.split("@")[0];
+
+          // Garante que o contato exista no banco
+          await prisma.contact.upsert({
+            where: { id: contactId },
+            update: {},
+            create: { id: contactId },
+          });
+
+          // Determina uma representação textual da última mensagem
+          let lastMessage = "[Mensagem não suportada]";
+          const messageContent = msg.message;
+          if (messageContent?.conversation) {
+            lastMessage = messageContent.conversation;
+          } else if (messageContent?.extendedTextMessage?.text) {
+            lastMessage = messageContent.extendedTextMessage.text;
+          } else if (messageContent?.reactionMessage) {
+            lastMessage = `[Reação: ${messageContent.reactionMessage.text}]`;
+          } else if (messageContent?.stickerMessage) {
+            lastMessage = "[Figurinha]";
+          } else if (messageContent?.imageMessage) {
+            lastMessage = "[Imagem]";
+          } else if (messageContent?.audioMessage) {
+            lastMessage = "[Áudio]";
+          } else if (messageContent?.videoMessage) {
+            lastMessage = "[Vídeo]";
+          } else if (messageContent?.documentMessage) {
+            lastMessage = "[Documento]";
+          }
+
+          const timestamp = msg.messageTimestamp
+            ? new Date(msg.messageTimestamp * 1000)
+            : new Date();
+
+          await prisma.chat.upsert({
+            where: { id: remoteJid },
+            update: { lastMessage, timestamp },
+            create: {
+              id: remoteJid,
+              lastMessage,
+              timestamp,
+              contact: { connect: { id: contactId } },
+            },
+          });
+        }
+      }
 
       // Lógica específica para o evento de atualização de status da mensagem
       if (webhookData.event === "messages.update") {
