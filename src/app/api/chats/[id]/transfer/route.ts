@@ -20,6 +20,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
 
+    // Verificar se o chat existe
+    const existingChat = await prisma.chat.findUnique({
+      where: { id: chatId }
+    })
+
+    if (!existingChat) {
+      return NextResponse.json({ error: "Chat não encontrado" }, { status: 404 })
+    }
+
     // Atualizar o chat no banco de dados
     const updatedChat = await prisma.chat.update({
       where: { id: chatId },

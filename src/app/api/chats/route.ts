@@ -80,6 +80,22 @@ export async function GET(request: NextRequest) {
     const localChats = await prisma.chat.findMany({
       include: { contact: true },
     })
+
+    // Buscar usuário "Agente IA" ou criar se não existir
+    let aiAgent = await prisma.user.findFirst({
+      where: { name: "Agente IA" }
+    })
+
+    if (!aiAgent) {
+      aiAgent = await prisma.user.create({
+        data: {
+          name: "Agente IA",
+          email: "ai@omni-metalaser.com",
+          password: "ai-agent-password", // Senha temporária
+          role: "agent"
+        }
+      })
+    }
     const chatMap = new Map(formattedChats.map((c) => [c.id, c]))
 
     // Processar cada chat da API Evolution
@@ -101,26 +117,76 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    for (const chat of localChats) {
-      const existing = chatMap.get(chat.id)
+    // Atualizar chats da API Evolution com dados do banco local
+    for (const localChat of localChats) {
+      const existing = chatMap.get(localChat.id)
       if (existing) {
-        existing.assignedTo = chat.assignedTo || existing.assignedTo
+        // Atualizar com dados do banco local
+        existing.assignedTo = localChat.assignedTo || "N/A"
+        existing.status = localChat.status as any
+        existing.lastMessage = localChat.lastMessage || existing.lastMessage
+        existing.timestamp = localChat.timestamp.toLocaleString("pt-BR")
+        existing.unreadCount = localChat.unreadCount || existing.unreadCount
+        existing.profilePicUrl = localChat.profilePicUrl || existing.profilePicUrl
       } else {
         // Para chats locais que não estão na API Evolution
+        const phoneNumber = localChat.id.split('@')[0]
+        const savedContactName = contactMap.get(phoneNumber)
+        
+        chatMap.set(localChat.id, {
+          id: localChat.id,
+          contact: savedContactName || `${phoneNumber} - Não Salvo`,
+          lastMessage: localChat.lastMessage || "[Sem mensagens]",
+          timestamp: localChat.timestamp.toLocaleString("pt-BR"),
+          unreadCount: localChat.unreadCount || 0,
+          assignedTo: localChat.assignedTo || "N/A",
+          status: localChat.status as any,
+          profilePicUrl: localChat.profilePicUrl || null,
+          isSavedContact: !!savedContactName,
+        })
+      }
+    }
+
+    // Atribuir conversas não atribuídas ao Agente IA (apenas para chats que não existem no banco)
+    for (const chat of formattedChats) {
+      const existingChat = localChats.find(c => c.id === chat.id)
+      
+      if (!existingChat) {
+        // Criar novo chat no banco atribuído ao Agente IA
         const phoneNumber = chat.id.split('@')[0]
         const savedContactName = contactMap.get(phoneNumber)
         
-        chatMap.set(chat.id, {
-          id: chat.id,
-          contact: savedContactName || `${chat.contact?.id || ""} - Não Salvo`,
-          lastMessage: chat.lastMessage || "[Sem mensagens]",
-          timestamp: chat.timestamp.toLocaleString("pt-BR"),
-          unreadCount: chat.unreadCount || 0,
-          assignedTo: chat.assignedTo || "N/A",
-          status: chat.status as any,
-          profilePicUrl: chat.profilePicUrl || null,
-          isSavedContact: !!savedContactName,
-        })
+        try {
+          // Primeiro, criar ou conectar o contato
+          await prisma.contact.upsert({
+            where: { id: phoneNumber },
+            update: {},
+            create: { 
+              id: phoneNumber,
+              name: savedContactName || null
+            }
+          })
+          
+          // Depois, criar o chat
+          await prisma.chat.create({
+            data: {
+              id: chat.id,
+              contactId: phoneNumber,
+              assignedTo: "Agente IA",
+              userId: aiAgent.id,
+              status: "active",
+              lastMessage: chat.lastMessage,
+              timestamp: new Date(),
+              unreadCount: chat.unreadCount || 0,
+              profilePicUrl: chat.profilePicUrl
+            }
+          })
+          
+          // Atualizar o chat no mapa
+          chat.assignedTo = "Agente IA"
+        } catch (error) {
+          console.error("Erro ao criar chat no banco:", error)
+        }
       }
     }
 

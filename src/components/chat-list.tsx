@@ -45,6 +45,7 @@ export function ChatList({
 }: ChatListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "my" | "unassigned">("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSaveContactDialogOpen, setIsSaveContactDialogOpen] = useState(false)
   const [isEditContactDialogOpen, setIsEditContactDialogOpen] = useState(false)
@@ -186,7 +187,18 @@ export function ChatList({
       typeof chat.lastMessage === "string" && chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSearch = contactMatch || messageMatch
     const matchesFilter = filter === "all" || chat.status === filter
-    return matchesSearch && matchesFilter
+    
+    // Filtro por atribuição
+    let matchesAssignment = true
+    if (assignmentFilter === "my") {
+      // Mostrar apenas chats atribuídos ao usuário atual (você pode ajustar isso baseado no usuário logado)
+      matchesAssignment = !!(chat.assignedTo && chat.assignedTo !== "Agente IA")
+    } else if (assignmentFilter === "unassigned") {
+      // Mostrar apenas chats não atribuídos ou atribuídos ao Agente IA
+      matchesAssignment = !chat.assignedTo || chat.assignedTo === "Agente IA"
+    }
+    
+    return matchesSearch && matchesFilter && matchesAssignment
   })
 
   return (
@@ -338,12 +350,12 @@ export function ChatList({
           </div>
           <div className="flex space-x-1">
             <Button
-              variant={filter === "all" ? "default" : "outline"}
+              variant={assignmentFilter === "all" ? "default" : "outline"}
               size="sm"
-              onClick={() => setFilter("all")}
+              onClick={() => setAssignmentFilter("all")}
               className={cn(
                 "h-7 px-2 text-xs",
-                filter === "all"
+                assignmentFilter === "all"
                   ? "gradient-purple text-white"
                   : "border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50",
               )}
@@ -351,30 +363,30 @@ export function ChatList({
               Todas
             </Button>
             <Button
-              variant={filter === "active" ? "default" : "outline"}
+              variant={assignmentFilter === "my" ? "default" : "outline"}
               size="sm"
-              onClick={() => setFilter("active")}
+              onClick={() => setAssignmentFilter("my")}
               className={cn(
                 "h-7 px-2 text-xs",
-                filter === "active"
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/50",
+                assignmentFilter === "my"
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/50",
               )}
             >
-              Ativas
+              Minhas
             </Button>
             <Button
-              variant={filter === "waiting" ? "default" : "outline"}
+              variant={assignmentFilter === "unassigned" ? "default" : "outline"}
               size="sm"
-              onClick={() => setFilter("waiting")}
+              onClick={() => setAssignmentFilter("unassigned")}
               className={cn(
                 "h-7 px-2 text-xs",
-                filter === "waiting"
-                  ? "bg-yellow-600 hover:bg-yellow-700 text-white"
-                  : "border-yellow-200 hover:bg-yellow-50 dark:border-yellow-800 dark:hover:bg-yellow-950/50",
+                assignmentFilter === "unassigned"
+                  ? "bg-orange-600 hover:bg-orange-700 text-white"
+                  : "border-orange-200 hover:bg-orange-50 dark:border-orange-800 dark:hover:bg-orange-950/50",
               )}
             >
-              Aguardando
+              IA
             </Button>
           </div>
         </div>
@@ -458,13 +470,29 @@ export function ChatList({
                           )}
                         </div>
                         <div className="flex items-center justify-between mt-1">
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-2">
                             {chat.assignedTo && (
-                              <div className="flex items-center space-x-1 text-[11px] text-muted-foreground">
-                                <User className="h-3 w-3" />
-                                <span className="truncate max-w-16">{chat.assignedTo}</span>
-                              </div>
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
+                              >
+                                <User className="h-3 w-3 mr-1" />
+                                {chat.assignedTo}
+                              </Badge>
                             )}
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs px-2 py-0 h-5",
+                                chat.status === "active"
+                                  ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800"
+                                  : chat.status === "waiting"
+                                    ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800"
+                                    : "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+                              )}
+                            >
+                              {chat.status === "active" ? "Ativo" : chat.status === "waiting" ? "Aguardando" : "Finalizado"}
+                            </Badge>
                           </div>
                           <div className="flex items-center space-x-1">
                             {chat.isSavedContact === false && (

@@ -371,6 +371,11 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
   const transferChat = async (userId: string) => {
     if (!chat) return
+    
+    // Buscar o nome do usuário para mostrar na mensagem
+    const user = users.find(u => u.id === userId)
+    const userName = user ? user.name : "usuário"
+    
     try {
       const response = await fetch(`/api/chats/${chat.id}/transfer`, {
         method: "POST",
@@ -380,9 +385,17 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         },
         body: JSON.stringify({ userId }),
       })
+      
       if (response.ok) {
+        const data = await response.json()
+        
+        // Atualizar a lista de chats
         onChatUpdate()
-        toast.success("Conversa transferida com sucesso")
+        
+        toast.success(`Conversa transferida para ${userName}`)
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.error || "Erro ao transferir conversa")
       }
     } catch (error) {
       console.error("Failed to transfer chat:", error)
@@ -401,9 +414,16 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         },
         body: JSON.stringify({ status }),
       })
+      
       if (response.ok) {
+        const data = await response.json()
         onChatUpdate()
-        toast.success("Status atualizado com sucesso")
+        
+        const statusText = getStatusText(status)
+        toast.success(`Status alterado para ${statusText}`)
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.error || "Erro ao atualizar status")
       }
     } catch (error) {
       console.error("Failed to update status:", error)
@@ -525,15 +545,18 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                   />
                   {getStatusText(chat.status)}
                 </Badge>
-                {chat.assignedTo && (
+              </div>
+              {chat.assignedTo && (
+                <div className="flex items-center space-x-1 mt-1">
                   <Badge
                     variant="outline"
                     className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
                   >
-                    {chat.assignedTo}
+                    <User className="h-3 w-3 mr-1" />
+                    Responsável: {chat.assignedTo}
                   </Badge>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center space-x-2">
