@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, RefreshCw, User, MessageCircle, Plus } from "lucide-react"
+import { Search, RefreshCw, User, MessageCircle, Plus, Save, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -23,6 +23,7 @@ interface Chat {
   assignedTo?: string
   status: "active" | "waiting" | "closed"
   profilePicUrl?: string
+  isSavedContact?: boolean
 }
 
 interface ChatListProps {
@@ -45,8 +46,12 @@ export function ChatList({
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isSaveContactDialogOpen, setIsSaveContactDialogOpen] = useState(false)
+  const [isEditContactDialogOpen, setIsEditContactDialogOpen] = useState(false)
   const [users, setUsers] = useState<Array<{ id: string; name: string }>>([])
-  const [newContact, setNewContact] = useState({ contact: "", assignedTo: "" })
+  const [newContact, setNewContact] = useState({ contact: "", name: "", assignedTo: "" })
+  const [contactToSave, setContactToSave] = useState<{ chat: Chat | null; name: string }>({ chat: null, name: "" })
+  const [contactToEdit, setContactToEdit] = useState<{ chat: Chat | null; name: string }>({ chat: null, name: "" })
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -83,7 +88,7 @@ export function ChatList({
       if (res.ok) {
         toast.success("Contato adicionado")
         setIsDialogOpen(false)
-        setNewContact({ contact: "", assignedTo: "" })
+        setNewContact({ contact: "", name: "", assignedTo: "" })
         onRefresh()
       } else {
         toast.error("Falha ao adicionar contato")
@@ -91,6 +96,86 @@ export function ChatList({
     } catch (err) {
       console.error("Failed to add contact", err)
       toast.error("Falha ao adicionar contato")
+    }
+  }
+
+  const handleSaveContact = (chat: Chat) => {
+    // Extrair o nome do contato (remover "- Não Salvo" se presente)
+    const contactName = chat.contact.replace(" - Não Salvo", "").trim()
+    setContactToSave({ chat, name: contactName })
+    setIsSaveContactDialogOpen(true)
+  }
+
+  const handleConfirmSaveContact = async () => {
+    if (!contactToSave.chat) return
+
+    try {
+      // Extrair o número do telefone do ID do chat
+      const phoneNumber = contactToSave.chat.id.split('@')[0]
+      
+      const res = await fetch("/api/contacts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          id: phoneNumber,
+          name: contactToSave.name,
+        }),
+      })
+      
+      if (res.ok) {
+        toast.success("Contato salvo com sucesso!")
+        setIsSaveContactDialogOpen(false)
+        setContactToSave({ chat: null, name: "" })
+        onRefresh()
+      } else {
+        toast.error("Falha ao salvar contato")
+      }
+    } catch (err) {
+      console.error("Failed to save contact", err)
+      toast.error("Falha ao salvar contato")
+    }
+  }
+
+  const handleEditContact = (chat: Chat) => {
+    // Para contatos salvos, usar o nome atual
+    const contactName = chat.contact
+    setContactToEdit({ chat, name: contactName })
+    setIsEditContactDialogOpen(true)
+  }
+
+  const handleConfirmEditContact = async () => {
+    if (!contactToEdit.chat) return
+
+    try {
+      // Extrair o número do telefone do ID do chat
+      const phoneNumber = contactToEdit.chat.id.split('@')[0]
+      
+      const res = await fetch("/api/contacts", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          id: phoneNumber,
+          name: contactToEdit.name,
+        }),
+      })
+      
+      if (res.ok) {
+        toast.success("Contato atualizado com sucesso!")
+        setIsEditContactDialogOpen(false)
+        setContactToEdit({ chat: null, name: "" })
+        onRefresh()
+      } else {
+        toast.error("Falha ao atualizar contato")
+      }
+    } catch (err) {
+      console.error("Failed to update contact", err)
+      toast.error("Falha ao atualizar contato")
     }
   }
 
@@ -138,6 +223,15 @@ export function ChatList({
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="contact">Nome do contato</Label>
+                    <Input
+                      id="contact-name"
+                      value={newContact.name}
+                      onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="assignedTo">Designar para</Label>
                     <Select
                       value={newContact.assignedTo}
@@ -156,6 +250,68 @@ export function ChatList({
                     </Select>
                   </div>
                   <Button type="submit" className="w-full">Adicionar</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Dialog para salvar contato */}
+            <Dialog open={isSaveContactDialogOpen} onOpenChange={setIsSaveContactDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Salvar Contato</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); handleConfirmSaveContact(); }}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contactName">Nome do Contato</Label>
+                      <Input
+                        id="contactName"
+                        value={contactToSave.name}
+                        onChange={(e) => setContactToSave({ ...contactToSave, name: e.target.value })}
+                        placeholder="Digite o nome do contato"
+                        required
+                      />
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setIsSaveContactDialogOpen(false)} className="flex-1">
+                        Cancelar
+                      </Button>
+                      <Button type="submit" className="flex-1">
+                        Salvar
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Dialog para editar contato */}
+            <Dialog open={isEditContactDialogOpen} onOpenChange={setIsEditContactDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Editar Contato</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={(e) => { e.preventDefault(); handleConfirmEditContact(); }}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="editContactName">Nome do Contato</Label>
+                      <Input
+                        id="editContactName"
+                        value={contactToEdit.name}
+                        onChange={(e) => setContactToEdit({ ...contactToEdit, name: e.target.value })}
+                        placeholder="Digite o nome do contato"
+                        required
+                      />
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setIsEditContactDialogOpen(false)} className="flex-1">
+                        Cancelar
+                      </Button>
+                      <Button type="submit" className="flex-1">
+                        Atualizar
+                      </Button>
+                    </div>
+                  </div>
                 </form>
               </DialogContent>
             </Dialog>
@@ -262,7 +418,21 @@ export function ChatList({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <p className="font-medium text-sm truncate text-foreground">{chat.contact}</p>
+                          <div className="flex items-center space-x-1">
+                            <p className={cn(
+                              "font-medium text-sm truncate",
+                              chat.isSavedContact === false 
+                                ? "text-orange-600 dark:text-orange-400" 
+                                : "text-foreground"
+                            )}>
+                              {chat.contact}
+                            </p>
+                            {chat.isSavedContact === false && (
+                              <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+                                Não Salvo
+                              </Badge>
+                            )}
+                          </div>
                           <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
                         </div>
                         <div className="flex items-center justify-between mt-1">
@@ -287,12 +457,44 @@ export function ChatList({
                             )
                           )}
                         </div>
-                        {chat.assignedTo && (
-                          <div className="flex items-center space-x-1 text-[11px] text-muted-foreground mt-1">
-                            <User className="h-3 w-3" />
-                            <span className="truncate max-w-16">{chat.assignedTo}</span>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="flex items-center space-x-1">
+                            {chat.assignedTo && (
+                              <div className="flex items-center space-x-1 text-[11px] text-muted-foreground">
+                                <User className="h-3 w-3" />
+                                <span className="truncate max-w-16">{chat.assignedTo}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className="flex items-center space-x-1">
+                            {chat.isSavedContact === false && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSaveContact(chat)
+                                }}
+                                className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/50"
+                              >
+                                <Save className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {chat.isSavedContact === true && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditContact(chat)
+                                }}
+                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/50"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

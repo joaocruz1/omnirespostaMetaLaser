@@ -61,28 +61,65 @@ export async function GET(request: NextRequest) {
         assignedTo: "N/A",
         status: "active" as const,
         profilePicUrl: chat.profilePicUrl || null,
+        isSavedContact: false, // Será atualizado posteriormente
       }
     })
 
+    // Buscar todos os contatos do banco de dados
+    const allContacts = await prisma.contact.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+    })
+    
+    // Criar um mapa para busca rápida de contatos
+    const contactMap = new Map(allContacts.map(contact => [contact.id, contact.name]))
+    
+    // Buscar chats locais
     const localChats = await prisma.chat.findMany({
       include: { contact: true },
     })
     const chatMap = new Map(formattedChats.map((c) => [c.id, c]))
+
+    // Processar cada chat da API Evolution
+    formattedChats.forEach((chat) => {
+      // Extrair o número do telefone do remoteJid (remove @s.whatsapp.net)
+      const phoneNumber = chat.id.split('@')[0]
+      
+      // Verificar se existe um contato salvo com esse número
+      const savedContactName = contactMap.get(phoneNumber)
+      
+      if (savedContactName) {
+        // Se o contato existe no banco, usar o nome salvo
+        chat.contact = savedContactName
+        chat.isSavedContact = true
+      } else {
+        // Se não existe, manter o nome original e marcar como não salvo
+        chat.contact = `${chat.contact} - Não Salvo`
+        chat.isSavedContact = false
+      }
+    })
 
     for (const chat of localChats) {
       const existing = chatMap.get(chat.id)
       if (existing) {
         existing.assignedTo = chat.assignedTo || existing.assignedTo
       } else {
+        // Para chats locais que não estão na API Evolution
+        const phoneNumber = chat.id.split('@')[0]
+        const savedContactName = contactMap.get(phoneNumber)
+        
         chatMap.set(chat.id, {
           id: chat.id,
-          contact: chat.contact?.id || "",
+          contact: savedContactName || `${chat.contact?.id || ""} - Não Salvo`,
           lastMessage: chat.lastMessage || "[Sem mensagens]",
           timestamp: chat.timestamp.toLocaleString("pt-BR"),
           unreadCount: chat.unreadCount || 0,
           assignedTo: chat.assignedTo || "N/A",
           status: chat.status as any,
           profilePicUrl: chat.profilePicUrl || null,
+          isSavedContact: !!savedContactName,
         })
       }
     }
@@ -97,9 +134,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { id, contact, assignedTo } = await request.json()
+    const { id, contact, name, assignedTo } = await request.json()
 
-    if (!id || !contact) {
+    if (!id || !contact || !name) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
     }
 
@@ -109,7 +146,7 @@ export async function POST(request: NextRequest) {
         contact: {
           connectOrCreate: {
             where: { id: contact },
-            create: { id: contact },
+            create: { id: contact, name },
           },
         },
         assignedTo,

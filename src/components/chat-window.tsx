@@ -35,6 +35,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { MessageMedia } from "./message-media"
 import { ImageViewer } from "./image-viewer"
+import { ContactInfoModal } from "./contact-info-modal"
 import Pusher from "pusher-js"
 
 interface Chat {
@@ -46,6 +47,7 @@ interface Chat {
   assignedTo?: string
   status: "active" | "waiting" | "closed"
   profilePicUrl?: string
+  isSavedContact?: boolean
 }
 
 interface Message {
@@ -80,6 +82,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
   const [showImageViewer, setShowImageViewer] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string; caption?: string } | null>(null)
+  const [showContactInfo, setShowContactInfo] = useState(false)
   const { user } = useAuth()
 
   const [isAiEnabled, setIsAiEnabled] = useState(true)
@@ -434,6 +437,24 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     }
   }
 
+  const getContactInfo = () => {
+    if (!chat) return null
+
+    const phoneNumber = chat.id.split('@')[0]
+    const contactName = chat.isSavedContact === true 
+      ? chat.contact 
+      : chat.contact.replace(" - Não Salvo", "")
+
+    return {
+      id: chat.id,
+      name: contactName,
+      phoneNumber: phoneNumber,
+      isSaved: chat.isSavedContact === true,
+      profilePicUrl: chat.profilePicUrl,
+      createdAt: undefined // Seria necessário buscar do banco se quiser mostrar
+    }
+  }
+
   if (!chat) {
     return (
       <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
@@ -455,7 +476,10 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       <CardHeader className="flex-shrink-0 border-b border-purple-200/30 dark:border-purple-800/30 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center shadow-sm">
+            <div 
+              className="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setShowContactInfo(true)}
+            >
               {chat.profilePicUrl ? (
                 <img
                   src={chat.profilePicUrl || "/placeholder.svg"}
@@ -468,8 +492,26 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
               )}
             </div>
             <div>
-              <CardTitle className="text-base font-semibold">{chat.contact}</CardTitle>
+              <div className="flex items-center space-x-2">
+                <CardTitle 
+                  className="text-base font-semibold cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                  onClick={() => setShowContactInfo(true)}
+                >
+                  {chat.isSavedContact === true 
+                    ? chat.contact 
+                    : chat.contact.replace(" - Não Salvo", "")
+                  }
+                </CardTitle>
+                {chat.isSavedContact === false && (
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+                    Não Salvo
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center space-x-2 mt-0.5">
+                <span className="text-xs text-muted-foreground">
+                  {chat.id.split('@')[0]}
+                </span>
                 <Badge variant="outline" className={cn("text-xs px-2 py-0 h-5", getStatusColor(chat.status))}>
                   <Circle
                     className={cn(
@@ -765,6 +807,14 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
             }}
           />
         )}
+
+        {/* Contact Info Modal */}
+        <ContactInfoModal
+          contact={getContactInfo()}
+          isOpen={showContactInfo}
+          onClose={() => setShowContactInfo(false)}
+          onUpdate={onChatUpdate}
+        />
       </CardContent>
     </Card>
   )
