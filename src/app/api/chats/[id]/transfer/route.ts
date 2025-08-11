@@ -17,6 +17,13 @@ export async function POST(
         { status: 404 }
       )
     }
+    const chatExists = await prisma.chat.findUnique({ where: { id: chatId } })
+    if (!chatExists) {
+      return NextResponse.json(
+        { error: "Conversa não encontrada" },
+        { status: 404 }
+      )
+    }
 
     const chat = await prisma.chat.update({
       where: { id: chatId },

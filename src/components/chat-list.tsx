@@ -287,12 +287,10 @@ export function ChatList({
                             )
                           )}
                         </div>
-                        {chat.assignedTo && (
-                          <div className="flex items-center space-x-1 text-[11px] text-muted-foreground mt-1">
-                            <User className="h-3 w-3" />
-                            <span className="truncate max-w-16">{chat.assignedTo}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-1 text-[11px] text-muted-foreground mt-1">
+                          <User className="h-3 w-3" />
+                          <span className="truncate max-w-16">{chat.assignedTo || "Agente IA"}</span>
+                        </div>
                       </div>
                     </div>
                   </div>

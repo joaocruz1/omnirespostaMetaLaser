@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         lastMessage: lastMessageText,
         timestamp: timestamp,
         unreadCount: chat.unreadCount || 0,
-        assignedTo: "N/A",
+        assignedTo: null,
         status: "active" as const,
         profilePicUrl: chat.profilePicUrl || null,
       }
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     for (const chat of localChats) {
       const existing = chatMap.get(chat.id)
       if (existing) {
-        existing.assignedTo = chat.assignedTo || existing.assignedTo
+        existing.assignedTo = chat.assignedTo ?? existing.assignedTo
       } else {
         chatMap.set(chat.id, {
           id: chat.id,
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
           lastMessage: chat.lastMessage || "[Sem mensagens]",
           timestamp: chat.timestamp.toLocaleString("pt-BR"),
           unreadCount: chat.unreadCount || 0,
-          assignedTo: chat.assignedTo || "N/A",
+          assignedTo: chat.assignedTo ?? null,
           status: chat.status as any,
           profilePicUrl: chat.profilePicUrl || null,
         })

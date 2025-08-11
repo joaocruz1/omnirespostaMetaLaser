@@ -483,12 +483,19 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                   />
                   {getStatusText(chat.status)}
                 </Badge>
-                {chat.assignedTo && (
+                {chat.assignedTo ? (
                   <Badge
                     variant="outline"
                     className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
                   >
                     {chat.assignedTo}
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
+                  >
+                    Agente IA
                   </Badge>
                 )}
               </div>
