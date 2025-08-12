@@ -29,10 +29,11 @@ import {
   AlertCircle,
   Bot,
   BotOff,
+  Volume2,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, notify } from "@/lib/utils"
 import { MessageMedia } from "./message-media"
 import { ImageViewer } from "./image-viewer"
 import { ContactInfoModal } from "./contact-info-modal"
@@ -64,10 +65,11 @@ interface Message {
 interface ChatWindowProps {
   chat: Chat | null
   onChatUpdate: () => void
+  onUpdateSelectedChat?: () => void
   lastPusherEvent: any
 }
 
-export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowProps) {
+export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPusherEvent }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(false)
@@ -86,6 +88,7 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const { user } = useAuth()
 
   const [isAiEnabled, setIsAiEnabled] = useState(true)
+
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const resetInactivityTimer = () => {
@@ -95,8 +98,79 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
     if (!isAiEnabled) {
       inactivityTimerRef.current = setTimeout(() => {
         setIsAiEnabled(true)
-        toast.info("Agente IA reativado após 20 minutos de inatividade.")
-      }, 20 * 60 * 1000)
+        toast.info("Agente IA reativado automaticamente após 30 minutos. Transferindo conversa...")
+        // Transferir conversa de volta para Agente IA quando reativar automaticamente
+        transferChatToAI()
+      }, 30 * 60 * 1000) // 30 minutos
+    }
+  }
+
+  const transferChatToUser = async () => {
+    if (!chat || !user) return
+
+    // Verificar se o chat já está atribuído ao usuário atual
+    if (chat.assignedTo === user.name) {
+      toast.info("Esta conversa já está atribuída a você")
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/chats/${chat.id}/transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      })
+
+      if (response.ok) {
+        toast.success("Conversa transferida para você com sucesso!")
+        // Atualizar apenas o chat selecionado para evitar recarregar todo o componente
+        if (onUpdateSelectedChat) {
+          onUpdateSelectedChat()
+        }
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Erro ao transferir conversa")
+      }
+    } catch (error) {
+      console.error("Failed to transfer chat:", error)
+      toast.error("Erro ao transferir conversa")
+    }
+  }
+
+  const transferChatToAI = async () => {
+    if (!chat) return
+
+    // Verificar se o chat já está atribuído ao Agente IA
+    if (chat.assignedTo === "Agente IA") {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/chats/${chat.id}/transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ userId: null }), // null indica transferência para Agente IA
+      })
+
+      if (response.ok) {
+        toast.success("Conversa transferida para Agente IA com sucesso!")
+        // Atualizar apenas o chat selecionado para evitar recarregar todo o componente
+        if (onUpdateSelectedChat) {
+          onUpdateSelectedChat()
+        }
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Erro ao transferir conversa para Agente IA")
+      }
+    } catch (error) {
+      console.error("Failed to transfer chat to AI:", error)
+      toast.error("Erro ao transferir conversa para Agente IA")
     }
   }
 
@@ -141,14 +215,20 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
   useEffect(() => {
     if (chat) {
-      const stored = localStorage.getItem(`ai-enabled-${chat.id}`)
-      setIsAiEnabled(stored !== "false")
+      // Se a conversa está atribuída ao Agente IA, mostrar como IA Ativa
+      if (chat.assignedTo === "Agente IA") {
+        setIsAiEnabled(true)
+      } else {
+        // Se a conversa está atribuída a um usuário, mostrar como IA Inativa
+        setIsAiEnabled(false)
+      }
     }
   }, [chat])
 
   useEffect(() => {
     if (chat) {
-      localStorage.setItem(`ai-enabled-${chat.id}`, String(isAiEnabled))
+      // Não salvar no localStorage, pois agora o estado é baseado apenas no assignedTo
+      // localStorage.setItem(`ai-enabled-${chat.id}`, String(isAiEnabled))
     }
     if (isAiEnabled) {
       if (inactivityTimerRef.current) {
@@ -166,7 +246,17 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         clearTimeout(inactivityTimerRef.current)
       }
     }
-  }, [])
+  }, [chat?.id]) // Limpar timer quando o chat mudar
+
+  // Manter foco no textarea quando o componente montar
+  useEffect(() => {
+    if (chat && textareaRef.current) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [chat?.id])
 
   // Atualizar status da mensagem com Pusher
   useEffect(() => {
@@ -221,17 +311,27 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       setHasMore(true)
       loadMessages(1, false)
       loadUsers()
+      // Manter o foco no textarea quando trocar de chat
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 200)
     } else {
       setMessages([])
     }
-  }, [chat])
+  }, [chat?.id]) // Usar apenas o ID do chat para evitar recarregamentos desnecessários
 
   // Atualizar mensagens quando receber eventos do Pusher
   useEffect(() => {
     if (chat && lastPusherEvent) {
-      loadMessages(1, false)
+      // Em vez de recarregar todas as mensagens, apenas adicionar a nova mensagem
+      // Isso evita o reload completo da janela
+      const newMessage = lastPusherEvent.message
+      if (newMessage && newMessage.chatId === chat.id) {
+        setMessages(prev => [...prev, newMessage])
+        setShouldScrollToBottom(true)
+      }
     }
-  }, [lastPusherEvent])
+  }, [lastPusherEvent, chat])
 
   useEffect(() => {
     if (shouldScrollToBottom && scrollAreaRef.current) {
@@ -266,11 +366,38 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
   const sendMessage = async (file?: File) => {
     if ((!newMessage.trim() && !file) || !chat || loading) return
 
+    // Verificar se o chat está atribuído ao Agente IA e transferir automaticamente
+    if (chat.assignedTo === "Agente IA" && user) {
+      try {
+        const response = await fetch(`/api/chats/${chat.id}/transfer`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ userId: user.id }),
+        })
+
+        if (response.ok) {
+          notify.aiAction('assumindo')
+          // Atualizar apenas o chat selecionado sem recarregar tudo
+          if (onUpdateSelectedChat) {
+            onUpdateSelectedChat()
+          }
+        } else {
+          console.error("Erro ao transferir conversa automaticamente")
+        }
+      } catch (error) {
+        console.error("Failed to auto-transfer chat:", error)
+      }
+    }
+
     resetInactivityTimer()
     setLoading(true)
     const optimisticId = `temp-${Date.now()}`
     const messageText = newMessage
-    setNewMessage("")
+    // Não limpar o input imediatamente para manter o foco
+    // setNewMessage("")
 
     let optimisticMessage: Message
 
@@ -336,7 +463,12 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
               : msg,
           ),
         )
-        onChatUpdate()
+        // Limpar o input apenas após o sucesso
+        setNewMessage("")
+        // Atualizar apenas a lista de chats sem recarregar a janela
+        if (onUpdateSelectedChat) {
+          onUpdateSelectedChat()
+        }
       } else {
         throw new Error(responseData.error || "Falha ao enviar mensagem.")
       }
@@ -344,13 +476,17 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       console.error("Failed to send message:", error)
       toast.error(`Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
+      // Em caso de erro, restaurar o texto da mensagem
       setNewMessage(messageText)
     } finally {
       setLoading(false)
       if (file && optimisticMessage.mediaUrl) {
         URL.revokeObjectURL(optimisticMessage.mediaUrl)
       }
-      textareaRef.current?.focus()
+      // Manter o foco no textarea após enviar
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 100)
     }
   }
 
@@ -387,10 +523,10 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       })
       
       if (response.ok) {
-        const data = await response.json()
-        
-        // Atualizar a lista de chats
-        onChatUpdate()
+        // Atualizar apenas o chat selecionado para evitar recarregar todo o componente
+        if (onUpdateSelectedChat) {
+          onUpdateSelectedChat()
+        }
         
         toast.success(`Conversa transferida para ${userName}`)
       } else {
@@ -416,8 +552,10 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
       })
       
       if (response.ok) {
-        const data = await response.json()
-        onChatUpdate()
+        // Atualizar apenas o chat selecionado para evitar recarregar todo o componente
+        if (onUpdateSelectedChat) {
+          onUpdateSelectedChat()
+        }
         
         const statusText = getStatusText(status)
         toast.success(`Status alterado para ${statusText}`)
@@ -550,10 +688,18 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 <div className="flex items-center space-x-1 mt-1">
                   <Badge
                     variant="outline"
-                    className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
+                    className={cn(
+                      "text-xs px-2 py-0 h-5",
+                      chat.assignedTo === "Agente IA"
+                        ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800"
+                        : "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
+                    )}
                   >
                     <User className="h-3 w-3 mr-1" />
                     Responsável: {chat.assignedTo}
+                    {chat.assignedTo === "Agente IA" && (
+                      <span className="ml-1 text-xs">(Envie uma mensagem para assumir)</span>
+                    )}
                   </Badge>
                 </div>
               )}
@@ -575,15 +721,19 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 const next = !isAiEnabled
                 setIsAiEnabled(next)
                 if (next) {
-                  toast.success("Agente IA ativado")
+                  toast.success("Agente IA ativado. Transferindo conversa para Agente IA...")
+                  // Transferir conversa de volta para Agente IA quando reativada
+                  await transferChatToAI()
                 } else {
                   toast.info(
-                    "Agente IA desativado. Será reativado automaticamente após 20 minutos de inatividade.",
+                    "Agente IA desativado. Transferindo conversa para você...",
                   )
+                  // Transferir conversa para o usuário logado quando IA for desativada
+                  await transferChatToUser()
                 }
               }}
               className={cn(
@@ -633,6 +783,16 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
         <div className="flex-1 min-h-0">
           <ScrollArea ref={scrollAreaRef} className="h-full scrollbar-thin">
             <div className="p-4 space-y-3">
+              {/* Mensagem informativa quando chat está atribuído ao Agente IA */}
+              {chat.assignedTo === "Agente IA" && (
+                <div className="text-center">
+                  <div className="inline-flex items-center space-x-2 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-2 text-sm text-orange-700 dark:text-orange-300">
+                    <Bot className="h-4 w-4" />
+                    <span>Esta conversa está sendo atendida pelo Agente IA. Envie uma mensagem para assumir o atendimento.</span>
+                  </div>
+                </div>
+              )}
+
               {/* Botão para carregar mensagens anteriores */}
               {hasMore && (
                 <div className="text-center">
@@ -686,7 +846,20 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                               />
                             )}
                             {message.type === "audio" && (
-                              <audio controls src={message.mediaUrl} className="w-full h-10" />
+                              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-w-xs">
+                                <audio src={message.mediaUrl} preload="metadata" />
+                                <div className="flex items-center space-x-3 mb-3">
+                                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                                    <Volume2 className="h-5 w-5 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">
+                                      {message.content || "Mensagem de áudio"}
+                                    </p>
+                                    <p className="text-xs text-gray-500">Carregando...</p>
+                                  </div>
+                                </div>
+                              </div>
                             )}
                             {message.type === "video" && (
                               <video src={message.mediaUrl} controls className="w-full max-h-64 rounded-lg" />
@@ -777,29 +950,43 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
 
         {/* Área de input */}
         <div className="border-t border-purple-200/30 dark:border-purple-800/30 p-4 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
-          <div className="flex items-end space-x-2">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              sendMessage()
+            }}
+            className="flex items-end space-x-2"
+          >
             <div className="flex-1">
               <Textarea
                 ref={textareaRef}
                 placeholder="Digite sua mensagem..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault()
+                    e.stopPropagation()
                     sendMessage()
                   }
                 }}
                 className="min-h-[40px] max-h-24 resize-none text-sm bg-white dark:bg-gray-800 border border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600 rounded-full px-4 py-2"
                 disabled={loading}
+                autoFocus
               />
             </div>
             <div className="flex space-x-1">
               <Button
-                onClick={() => sendMessage()}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  sendMessage()
+                }}
                 disabled={loading || !newMessage.trim()}
                 size="sm"
                 className="h-8 w-8 p-0 rounded-full gradient-purple hover:opacity-90 shadow-sm"
+                type="button"
               >
                 {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               </Button>
@@ -807,14 +994,19 @@ export function ChatWindow({ chat, onChatUpdate, lastPusherEvent }: ChatWindowPr
                 variant="outline"
                 size="sm"
                 className="h-8 w-8 p-0 rounded-full border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  fileInputRef.current?.click()
+                }}
                 disabled={loading}
+                type="button"
               >
                 <Paperclip className="h-3 w-3" />
               </Button>
               <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Image Viewer Modal */}

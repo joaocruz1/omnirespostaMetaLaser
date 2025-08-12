@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Play, FileText, ImageIcon, Volume2, MapPin, ExternalLink, Eye } from "lucide-react"
+import { Download, Play, FileText, ImageIcon, Volume2, MapPin, ExternalLink, Eye, Pause, VolumeX, Volume1 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ImageViewer } from "./image-viewer"
-import { AudioPlayer } from "./audio-player"
 import { DocumentViewer } from "./document-viewer"
+import { Slider } from "@/components/ui/slider"
 
 interface MessageMediaProps {
   messageId: string
@@ -22,8 +22,14 @@ export function MessageMedia({ messageId, chatId, type, content, className }: Me
   const [isPlaying, setIsPlaying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showImageViewer, setShowImageViewer] = useState(false)
-  const [showAudioPlayer, setShowAudioPlayer] = useState(false)
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
+  
+  // Audio player states
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(0.7)
+  const [isMuted, setIsMuted] = useState(false)
 
   const loadMedia = async () => {
     if (mediaUrl || isLoading) return
@@ -57,6 +63,101 @@ export function MessageMedia({ messageId, chatId, type, content, className }: Me
     link.click()
     document.body.removeChild(link)
   }
+
+  // Audio player functions
+  const togglePlayPause = () => {
+    if (!audioRef.current) return
+
+    if (isPlaying) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play()
+    }
+    setIsPlaying(!isPlaying)
+  }
+
+  const handleSeek = (value: number[]) => {
+    if (!audioRef.current) return
+    const newTime = value[0]
+    audioRef.current.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  const handleVolumeChange = (value: number[]) => {
+    const newVolume = value[0]
+    setVolume(newVolume)
+    if (newVolume > 0 && isMuted) {
+      setIsMuted(false)
+    }
+  }
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted)
+  }
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00"
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  }
+
+  const getVolumeIcon = () => {
+    if (isMuted || volume === 0) return VolumeX
+    if (volume < 0.5) return Volume1
+    return Volume2
+  }
+
+  // Audio event listeners
+  useEffect(() => {
+    if (!mediaUrl || type !== "audio") return
+
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration)
+    }
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime)
+    }
+
+    const handleEnded = () => {
+      setIsPlaying(false)
+      setCurrentTime(0)
+    }
+
+    const handlePlay = () => {
+      setIsPlaying(true)
+    }
+
+    const handlePause = () => {
+      setIsPlaying(false)
+    }
+
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata)
+    audio.addEventListener("timeupdate", handleTimeUpdate)
+    audio.addEventListener("ended", handleEnded)
+    audio.addEventListener("play", handlePlay)
+    audio.addEventListener("pause", handlePause)
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata)
+      audio.removeEventListener("timeupdate", handleTimeUpdate)
+      audio.removeEventListener("ended", handleEnded)
+      audio.removeEventListener("play", handlePlay)
+      audio.removeEventListener("pause", handlePause)
+    }
+  }, [mediaUrl, type])
+
+  // Update audio properties
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      audio.volume = isMuted ? 0 : volume
+    }
+  }, [volume, isMuted])
 
   const getFileExtension = (filename: string) => {
     return filename.split(".").pop()?.toLowerCase() || ""
@@ -166,34 +267,69 @@ export function MessageMedia({ messageId, chatId, type, content, className }: Me
 
       case "audio":
         return (
-          <>
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg max-w-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-w-xs">
+            <audio ref={audioRef} src={mediaUrl} preload="metadata" />
+            
+            {/* Audio Header */}
+            <div className="flex items-center space-x-3 mb-3">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAudioPlayer(true)}
-                className="flex items-center space-x-2 p-0 h-auto hover:bg-transparent"
+                onClick={togglePlayPause}
+                className="w-10 h-10 p-0 bg-purple-500 hover:bg-purple-600 text-white rounded-full"
+                disabled={isLoading}
               >
-                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                  <Volume2 className="h-5 w-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Mensagem de áudio</p>
-                  <p className="text-xs text-gray-500">Clique para reproduzir</p>
-                </div>
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
               </Button>
-              <Button variant="ghost" size="sm" onClick={downloadMedia} className="ml-auto">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {content || "Mensagem de áudio"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {formatTime(currentTime)} / {formatTime(duration)}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={downloadMedia} className="p-1">
                 <Download className="h-3 w-3" />
               </Button>
             </div>
-            <AudioPlayer
-              src={mediaUrl || ""}
-              title={content || "Áudio"}
-              isOpen={showAudioPlayer}
-              onClose={() => setShowAudioPlayer(false)}
-              caption={content}
-            />
-          </>
+
+            {/* Progress Bar */}
+            <div className="space-y-2 mb-3">
+              <Slider
+                value={[currentTime]}
+                max={duration || 100}
+                step={0.1}
+                onValueChange={handleSeek}
+                className="w-full"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Volume Controls */}
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleMute}
+                className="p-1 h-6 w-6"
+              >
+                {(() => {
+                  const VolumeIcon = getVolumeIcon()
+                  return <VolumeIcon className="h-3 w-3" />
+                })()}
+              </Button>
+              <div className="flex-1">
+                <Slider
+                  value={[isMuted ? 0 : volume]}
+                  max={1}
+                  step={0.01}
+                  onValueChange={handleVolumeChange}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
         )
 
       case "video":

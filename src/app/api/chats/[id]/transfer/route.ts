@@ -6,6 +6,33 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { userId } = await request.json()
     const chatId = params.id
 
+    // Verificar se o chat existe
+    const existingChat = await prisma.chat.findUnique({
+      where: { id: chatId }
+    })
+
+    if (!existingChat) {
+      return NextResponse.json({ error: "Chat não encontrado" }, { status: 404 })
+    }
+
+    // Se userId for null, transferir para Agente IA
+    if (userId === null) {
+      const updatedChat = await prisma.chat.update({
+        where: { id: chatId },
+        data: {
+          assignedTo: "Agente IA",
+          userId: null
+        },
+        include: { contact: true }
+      })
+
+      return NextResponse.json({ 
+        success: true, 
+        chat: updatedChat 
+      })
+    }
+
+    // Se userId for fornecido, transferir para o usuário específico
     if (!userId) {
       return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })
     }
@@ -18,15 +45,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     if (!user) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
-
-    // Verificar se o chat existe
-    const existingChat = await prisma.chat.findUnique({
-      where: { id: chatId }
-    })
-
-    if (!existingChat) {
-      return NextResponse.json({ error: "Chat não encontrado" }, { status: 404 })
     }
 
     // Atualizar o chat no banco de dados

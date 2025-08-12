@@ -18,7 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Users, UserPlus, Shield, User } from "lucide-react"
+import { Plus, Edit, Trash2, Users, UserPlus, Shield, User, MessageSquare } from "lucide-react"
+import { UserContactsModal } from "./user-contacts-modal"
 
 interface UserManagementUser {
   id: string
@@ -33,6 +34,8 @@ export function UserManagement() {
   const [users, setUsers] = useState<UserManagementUser[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserManagementUser | null>(null)
+  const [contactsModalOpen, setContactsModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UserManagementUser | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -121,6 +124,11 @@ export function UserManagement() {
       console.error("Failed to delete user:", error)
       toast.error("Não foi possível excluir o usuário")
     }
+  }
+
+  const handleViewContacts = (user: UserManagementUser) => {
+    setSelectedUser(user)
+    setContactsModalOpen(true)
   }
 
   return (
@@ -273,8 +281,18 @@ export function UserManagement() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleViewContacts(user)}
+                    className="border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 dark:border-blue-800 dark:hover:bg-blue-950/50"
+                    title="Ver contatos"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleEdit(user)}
                     className="border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50"
+                    title="Editar usuário"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -283,6 +301,7 @@ export function UserManagement() {
                     size="sm"
                     onClick={() => handleDelete(user.id)}
                     className="border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950/50"
+                    title="Excluir usuário"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -292,6 +311,19 @@ export function UserManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Contatos do Usuário */}
+      {selectedUser && (
+        <UserContactsModal
+          isOpen={contactsModalOpen}
+          onClose={() => {
+            setContactsModalOpen(false)
+            setSelectedUser(null)
+          }}
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+        />
+      )}
     </div>
   )
 }

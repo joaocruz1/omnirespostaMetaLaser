@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, RefreshCw, User, MessageCircle, Plus, Save, Edit } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { useAuth } from "@/components/auth-provider"
 
 interface Chat {
   id: string
@@ -43,6 +44,7 @@ export function ChatList({
   unreadChats,
   isLoading = false,
 }: ChatListProps) {
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<"all" | "active" | "waiting" | "closed">("all")
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "my" | "unassigned">("all")
@@ -191,8 +193,8 @@ export function ChatList({
     // Filtro por atribuição
     let matchesAssignment = true
     if (assignmentFilter === "my") {
-      // Mostrar apenas chats atribuídos ao usuário atual (você pode ajustar isso baseado no usuário logado)
-      matchesAssignment = !!(chat.assignedTo && chat.assignedTo !== "Agente IA")
+      // Mostrar apenas chats atribuídos ao usuário atual
+      matchesAssignment = chat.assignedTo === user?.name
     } else if (assignmentFilter === "unassigned") {
       // Mostrar apenas chats não atribuídos ou atribuídos ao Agente IA
       matchesAssignment = !chat.assignedTo || chat.assignedTo === "Agente IA"
@@ -403,16 +405,21 @@ export function ChatList({
               {filteredChats.map((chat) => {
                 const newMessagesCount = unreadChats.get(chat.id)
                 return (
-                  <div
-                    key={chat.id}
-                    className={cn(
-                      "p-3 cursor-pointer transition-colors border-b last:border-b-0 border-purple-100 dark:border-purple-900/50",
-                      selectedChat?.id === chat.id
-                        ? "bg-purple-50 dark:bg-purple-950/30"
-                        : "hover:bg-purple-50 dark:hover:bg-purple-950/20",
-                    )}
-                    onClick={() => onSelectChat(chat)}
-                  >
+                                     <div
+                     key={chat.id}
+                     className={cn(
+                       "p-3 cursor-pointer transition-colors border-b last:border-b-0 border-purple-100 dark:border-purple-900/50 relative",
+                       selectedChat?.id === chat.id
+                         ? "bg-purple-50 dark:bg-purple-950/30"
+                         : "hover:bg-purple-50 dark:hover:bg-purple-950/20",
+                       newMessagesCount && newMessagesCount > 0 && "bg-blue-50/50 dark:bg-blue-950/20"
+                     )}
+                     onClick={() => onSelectChat(chat)}
+                   >
+                     {/* Indicador de mensagem não lida */}
+                     {newMessagesCount && newMessagesCount > 0 && (
+                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-sm" />
+                     )}
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         {chat.profilePicUrl ? (
@@ -447,10 +454,15 @@ export function ChatList({
                           </div>
                           <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
                         </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-xs text-muted-foreground truncate flex-1">
-                            {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
-                          </p>
+                                                 <div className="flex items-center justify-between mt-1">
+                           <p className={cn(
+                             "text-xs truncate flex-1",
+                             newMessagesCount && newMessagesCount > 0
+                               ? "text-blue-600 dark:text-blue-400 font-medium"
+                               : "text-muted-foreground"
+                           )}>
+                             {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
+                           </p>
                           {newMessagesCount && newMessagesCount > 0 ? (
                             <Badge
                               variant="destructive"

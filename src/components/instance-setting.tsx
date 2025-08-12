@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { Settings, Smartphone, RefreshCw, Power, QrCode, Webhook, Zap } from "lucide-react"
+import { Settings, Smartphone, RefreshCw, Power, QrCode, Webhook, Zap, Bot, ArrowRight } from "lucide-react"
 
 interface InstanceStatus {
   instanceName: string
@@ -19,6 +19,7 @@ export function InstanceSettings() {
   const [instanceStatus, setInstanceStatus] = useState<InstanceStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [webhookUrl, setWebhookUrl] = useState("")
+  const [transferLoading, setTransferLoading] = useState(false)
 
   const loadInstanceStatus = async () => {
     try {
@@ -136,6 +137,32 @@ export function InstanceSettings() {
     } catch (error) {
       console.error("Failed to update webhook:", error)
       toast.error("Não foi possível atualizar o webhook")
+    }
+  }
+
+  const transferAllChatsToAI = async () => {
+    setTransferLoading(true)
+    try {
+      const response = await fetch("/api/chats/transfer-all-to-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(data.message)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Erro ao transferir chats para Agente IA")
+      }
+    } catch (error) {
+      console.error("Failed to transfer chats to AI:", error)
+      toast.error("Erro ao transferir chats para Agente IA")
+    } finally {
+      setTransferLoading(false)
     }
   }
 
@@ -286,6 +313,64 @@ export function InstanceSettings() {
             <Zap className="h-4 w-4 mr-2" />
             Atualizar Webhook
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Configurações do Agente IA */}
+      <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-purple">
+        <CardHeader>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+              <Bot className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-semibold">Gerenciamento do Agente IA</CardTitle>
+              <CardDescription>Gerencie a distribuição de conversas para o Agente IA</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 bg-gradient-to-r from-green-50/50 to-blue-50/50 dark:from-green-950/20 dark:to-blue-950/20 rounded-xl border border-green-200/30 dark:border-green-800/30">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                <ArrowRight className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Voltar Chamados para Agente IA</p>
+                <p className="text-sm text-muted-foreground">
+                  Transfere todas as conversas atuais que não estão com o Agente IA para ele
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
+                <p className="font-medium mb-1">Esta ação irá:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Identificar todos os chats que não estão atribuídos ao Agente IA</li>
+                  <li>Transferir automaticamente essas conversas para o Agente IA</li>
+                  <li>Manter as conversas já atribuídas ao Agente IA inalteradas</li>
+                  <li>Atualizar a interface em tempo real</li>
+                </ul>
+              </div>
+              <Button 
+                onClick={transferAllChatsToAI}
+                disabled={transferLoading}
+                className="w-full gradient-green hover:opacity-90 shadow-green"
+              >
+                {transferLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Transferindo...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="h-4 w-4 mr-2" />
+                    Transferir Todos os Chats para Agente IA
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

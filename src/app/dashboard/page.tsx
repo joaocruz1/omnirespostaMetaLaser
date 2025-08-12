@@ -7,12 +7,15 @@ import Pusher from 'pusher-js';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Users, Settings, LogOut, Sparkles } from "lucide-react";
+import { MessageSquare, Users, Settings, LogOut } from "lucide-react";
 import { ChatList } from "@/components/chat-list";
 import { ChatWindow } from "@/components/chat-window";
 import { UserManagement } from "@/components/user-management";
 import { InstanceSettings } from "@/components/instance-setting";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Image from "next/image";
+import { useTheme } from "next-themes"; // <-- adicionado
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 
 interface Chat {
   id: string;
@@ -27,43 +30,117 @@ interface Chat {
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { playNotificationSound } = useNotificationSound();
+
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [lastPusherEvent, setLastPusherEvent] = useState<any>(null);
-  // Estado para controlar as notificações de chats não lidos (agora um Map)
   const [unreadChats, setUnreadChats] = useState<Map<string, number>>(new Map());
+
+  // --- LÓGICA DO ÍCONE POR TEMA (única mudança funcional) ---
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const iconSrc = mounted && resolvedTheme === "dark"
+    ? "/iconNextWhite.png"
+    : "/iconNextBlack.png";
+  // ----------------------------------------------------------
 
   const loadChats = async () => {
     try {
       const response = await fetch("/api/chats", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       if (response.ok) {
         const data = await response.json();
         setChats(data);
+        updateSelectedChat(data);
       }
     } catch (error) {
       console.error("Failed to load chats:", error);
     }
   };
 
-  // Função para lidar com a seleção de um chat
+  // Função para atualizar apenas o chat selecionado sem recarregar toda a lista
+  const updateSelectedChatOnly = async () => {
+    if (!selectedChat) return;
+    
+    try {
+      // Buscar apenas o chat específico da lista atual
+      const response = await fetch("/api/chats", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (response.ok) {
+        const allChats = await response.json();
+        const updatedChat = allChats.find((chat: Chat) => chat.id === selectedChat.id);
+        if (updatedChat) {
+          setSelectedChat(updatedChat);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update selected chat:", error);
+    }
+  };
+
+  // Função para atualizar a última mensagem de um chat específico
+  const updateChatLastMessage = useCallback((chatId: string, messageContent: string, timestamp?: string) => {
+    setChats(prevChats => 
+      prevChats.map(chat => 
+        chat.id === chatId 
+          ? { 
+              ...chat, 
+              lastMessage: messageContent,
+              timestamp: timestamp || new Date().toLocaleString("pt-BR")
+            }
+          : chat
+      )
+    );
+  }, []);
+
+  // Função para atualizar o chat selecionado com dados atualizados
+  const updateSelectedChat = useCallback((updatedChats: Chat[]) => {
+    setSelectedChat(prevSelectedChat => {
+      if (prevSelectedChat) {
+        const updatedChat = updatedChats.find(chat => chat.id === prevSelectedChat.id);
+        return updatedChat || prevSelectedChat;
+      }
+      return prevSelectedChat;
+    });
+  }, []);
+
   const handleSelectChat = useCallback((chat: Chat) => {
     setSelectedChat(chat);
-    // Ao selecionar um chat, remove-o do mapa de contagem para limpar a notificação
+    // Limpar contador de mensagens não lidas quando selecionar o chat
     setUnreadChats(prev => {
       const newMap = new Map(prev);
       newMap.delete(chat.id);
       return newMap;
     });
+    
+    // Atualizar contador no banco de dados
+    if (chat.unreadCount > 0) {
+      fetch(`/api/chats/${chat.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ unreadCount: 0 }),
+      }).catch(error => {
+        console.error('Erro ao limpar contador de mensagens não lidas:', error);
+      });
+    }
   }, []);
 
   useEffect(() => {
     if (!user) {
       router.push("/login");
       return;
+    }
+
+    // Solicitar permissão para notificações
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
     }
 
     loadChats();
@@ -75,25 +152,50 @@ export default function DashboardPage() {
     const channel = pusher.subscribe('chat-updates');
 
     channel.bind('chat-event', (data: any) => {
-      console.log("Pusher event received, reloading UI:", data);
-      
-      loadChats();
+      console.log("Pusher event received:", data);
       setLastPusherEvent(data);
 
-      // Lógica para incrementar a contagem de notificações
-      if (data.event === 'messages.upsert' && data.data?.messages?.[0]) {
-        const message = data.data.messages[0];
-        const chatId = message.key.remoteJid;
-        const isIncoming = !message.key.fromMe;
+      // Verificar se é uma nova mensagem
+      if (data.event === 'messages.upsert' && data.message) {
+        const chatId = data.chatId;
+        const isIncoming = data.message.isIncoming;
+
+        // Atualizar a última mensagem do chat na interface (vem diretamente do webhook)
+        const messageTimestamp = data.message.timestamp 
+          ? new Date(data.message.timestamp * 1000).toLocaleString("pt-BR")
+          : new Date().toLocaleString("pt-BR");
+        
+        updateChatLastMessage(chatId, data.message.content, messageTimestamp);
 
         if (isIncoming && chatId !== selectedChat?.id) {
+          // Atualizar contador de mensagens não lidas
           setUnreadChats(prev => {
             const newMap = new Map(prev);
             const currentCount = newMap.get(chatId) || 0;
-            newMap.set(chatId, currentCount + 1); // Incrementa a contagem
+            newMap.set(chatId, currentCount + 1);
             return newMap;
           });
+
+          // Tocar som de notificação
+          playNotificationSound();
+
+          // Mostrar notificação do navegador
+          if (Notification.permission === "granted") {
+            const contactName = chats.find(chat => chat.id === chatId)?.contact || "Contato";
+            new Notification("Nova mensagem", {
+              body: `${contactName}: ${data.message.content}`,
+              icon: "/iconNextBlack.png",
+              tag: chatId, // Evita notificações duplicadas
+              requireInteraction: false
+            });
+          }
         }
+      } else if (data.event === 'messages.update') {
+        // Para atualizações de status, apenas atualizar o evento
+        // A interface será atualizada pelo chat-window
+      } else {
+        // Para outros eventos (chats.update, contacts.update, etc.), recarregar a lista
+        loadChats();
       }
     });
 
@@ -102,11 +204,9 @@ export default function DashboardPage() {
       channel.unsubscribe();
       pusher.disconnect();
     };
-  }, [user, router, selectedChat?.id]); // Adicionado selectedChat.id como dependência
+  }, [user, router, selectedChat?.id, updateChatLastMessage, playNotificationSound]);
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-purple-50/30 dark:to-purple-950/20">
@@ -115,8 +215,15 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 gradient-purple rounded-xl flex items-center justify-center shadow-purple">
-                  <Sparkles className="h-5 w-5 text-white" />
+                <div className="flex items-center justify-center">
+                  {/* Usa o ícone conforme o tema */}
+                  <Image
+                    src={iconSrc}
+                    alt="OmniResposta MetaLaser"
+                    width={60}
+                    height={60}
+                    priority
+                  />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
@@ -151,6 +258,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
+
       <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
         <div className="flex-1 min-h-0">
           <Tabs defaultValue="chats" className="h-full flex flex-col">
@@ -181,6 +289,7 @@ export default function DashboardPage() {
                 </>
               )}
             </TabsList>
+
             <TabsContent value="chats" className="flex-1 mt-4 min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
                 <div className="lg:col-span-1 min-h-0">
@@ -193,14 +302,16 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="lg:col-span-2 min-h-0">
-                  <ChatWindow 
-                    chat={selectedChat} 
-                    onChatUpdate={loadChats} 
-                    lastPusherEvent={lastPusherEvent} 
+                  <ChatWindow
+                    chat={selectedChat}
+                    onChatUpdate={loadChats}
+                    onUpdateSelectedChat={updateSelectedChatOnly}
+                    lastPusherEvent={lastPusherEvent}
                   />
                 </div>
               </div>
             </TabsContent>
+
             {user.role === "admin" && (
               <>
                 <TabsContent value="users" className="flex-1 mt-6 min-h-0 overflow-auto scrollbar-thin">

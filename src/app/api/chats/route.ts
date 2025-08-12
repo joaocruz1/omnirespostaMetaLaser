@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         chat.isSavedContact = true
       } else {
         // Se não existe, manter o nome original e marcar como não salvo
-        chat.contact = `${chat.contact} - Não Salvo`
+        chat.contact = `${chat.contact}`
         chat.isSavedContact = false
       }
     })
@@ -121,11 +121,11 @@ export async function GET(request: NextRequest) {
     for (const localChat of localChats) {
       const existing = chatMap.get(localChat.id)
       if (existing) {
-        // Atualizar com dados do banco local
+        // Atualizar com dados do banco local (exceto última mensagem que vem do webhook)
         existing.assignedTo = localChat.assignedTo || "N/A"
         existing.status = localChat.status as any
-        existing.lastMessage = localChat.lastMessage || existing.lastMessage
-        existing.timestamp = localChat.timestamp.toLocaleString("pt-BR")
+        // Última mensagem vem do webhook em tempo real, não do banco
+        // existing.lastMessage = localChat.lastMessage || existing.lastMessage
         existing.unreadCount = localChat.unreadCount || existing.unreadCount
         existing.profilePicUrl = localChat.profilePicUrl || existing.profilePicUrl
       } else {
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
         chatMap.set(localChat.id, {
           id: localChat.id,
           contact: savedContactName || `${phoneNumber} - Não Salvo`,
-          lastMessage: localChat.lastMessage || "[Sem mensagens]",
+          lastMessage: "[Sem mensagens]", // Será atualizada pelo webhook
           timestamp: localChat.timestamp.toLocaleString("pt-BR"),
           unreadCount: localChat.unreadCount || 0,
           assignedTo: localChat.assignedTo || "N/A",
@@ -157,15 +157,28 @@ export async function GET(request: NextRequest) {
         const savedContactName = contactMap.get(phoneNumber)
         
         try {
-          // Primeiro, criar ou conectar o contato
-          await prisma.contact.upsert({
-            where: { id: phoneNumber },
-            update: {},
-            create: { 
-              id: phoneNumber,
-              name: savedContactName || null
-            }
+          // Primeiro, verificar se o contato já existe
+          let contact = await prisma.contact.findUnique({
+            where: { id: phoneNumber }
           })
+
+          if (!contact) {
+            console.log(`Criando novo contato para chat: ${phoneNumber}`)
+            // Se não existe, criar novo
+            contact = await prisma.contact.create({
+              data: {
+                id: phoneNumber,
+                name: savedContactName || null
+              }
+            })
+          } else if (savedContactName && contact.name !== savedContactName) {
+            console.log(`Atualizando nome do contato: ${phoneNumber}`)
+            // Se existe mas o nome mudou, atualizar
+            contact = await prisma.contact.update({
+              where: { id: phoneNumber },
+              data: { name: savedContactName }
+            })
+          }
           
           // Depois, criar o chat
           await prisma.chat.create({
@@ -175,7 +188,7 @@ export async function GET(request: NextRequest) {
               assignedTo: "Agente IA",
               userId: aiAgent.id,
               status: "active",
-              lastMessage: chat.lastMessage,
+              // lastMessage: chat.lastMessage, // Não salvar no banco, vem do webhook
               timestamp: new Date(),
               unreadCount: chat.unreadCount || 0,
               profilePicUrl: chat.profilePicUrl
@@ -186,6 +199,35 @@ export async function GET(request: NextRequest) {
           chat.assignedTo = "Agente IA"
         } catch (error) {
           console.error("Erro ao criar chat no banco:", error)
+          
+          // Se for erro de contato duplicado, tentar apenas conectar o contato existente
+          if (error instanceof Error && error.message.includes('Unique constraint failed')) {
+            try {
+              // Verificar se o chat já existe
+              const existingChat = await prisma.chat.findUnique({
+                where: { id: chat.id }
+              })
+              
+              if (!existingChat) {
+                                 await prisma.chat.create({
+                   data: {
+                     id: chat.id,
+                     contactId: phoneNumber,
+                     assignedTo: "Agente IA",
+                     userId: aiAgent.id,
+                     status: "active",
+                     // lastMessage: chat.lastMessage, // Não salvar no banco, vem do webhook
+                     timestamp: new Date(),
+                     unreadCount: chat.unreadCount || 0,
+                     profilePicUrl: chat.profilePicUrl
+                   }
+                 })
+                chat.assignedTo = "Agente IA"
+              }
+            } catch (chatError) {
+              console.error("Erro ao criar chat após falha no contato:", chatError)
+            }
+          }
         }
       }
     }
@@ -206,15 +248,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
     }
 
+    // Verificar se o chat já existe
+    const existingChat = await prisma.chat.findUnique({
+      where: { id }
+    })
+
+    if (existingChat) {
+      return NextResponse.json({ error: "Chat já existe com este ID" }, { status: 409 })
+    }
+
+    // Verificar se o contato existe, se não, criar
+    let contactRecord = await prisma.contact.findUnique({
+      where: { id: contact }
+    })
+
+    if (!contactRecord) {
+      contactRecord = await prisma.contact.create({
+        data: { id: contact, name }
+      })
+    }
+
     const chat = await prisma.chat.create({
       data: {
         id,
-        contact: {
-          connectOrCreate: {
-            where: { id: contact },
-            create: { id: contact, name },
-          },
-        },
+        contactId: contact,
         assignedTo,
       },
       include: { contact: true },
@@ -223,7 +280,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(chat, { status: 201 })
   } catch (error) {
     console.error("Falha ao criar chat:", error)
-    const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
-    return NextResponse.json({ error: "Erro ao criar chat", details: errorMessage }, { status: 500 })
+    let errorMessage = "Erro desconhecido"
+    let statusCode = 500
+    
+    if (error instanceof Error) {
+      errorMessage = error.message
+      if (error.message.includes('Unique constraint failed')) {
+        errorMessage = "Chat ou contato já existe com este ID"
+        statusCode = 409
+      }
+    }
+    
+    return NextResponse.json({ error: "Erro ao criar chat", details: errorMessage }, { status: statusCode })
   }
 }

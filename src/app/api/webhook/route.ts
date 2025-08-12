@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { pusherServer } from '@/lib/pusher';
+import { prisma } from '@/lib/prisma';
 
 // Lista de eventos que devem acionar uma atualização no frontend.
 const RELEVANT_EVENTS = [
@@ -41,11 +42,64 @@ export async function POST(request: NextRequest) {
       } else {
         // Lógica para os outros eventos
         const eventName = 'chat-event';
-        const payload = {
+        let payload: any = {
           event: webhookData.event,
           chatId: webhookData.data?.key?.remoteJid || webhookData.data?.id,
           timestamp: new Date().toISOString()
         };
+
+        // Para mensagens novas, incluir informações da mensagem
+        if (webhookData.event === "messages.upsert" && webhookData.data?.messages?.[0]) {
+          const message = webhookData.data.messages[0];
+          const isIncoming = !message.key.fromMe;
+          const chatId = message.key.remoteJid;
+          
+          // Extrair conteúdo da mensagem
+          let messageContent = "[Mídia]";
+          if (message.message?.conversation) {
+            messageContent = message.message.conversation;
+          } else if (message.message?.extendedTextMessage?.text) {
+            messageContent = message.message.extendedTextMessage.text;
+          } else if (message.message?.imageMessage) {
+            messageContent = message.message.imageMessage.caption || "[Imagem]";
+          } else if (message.message?.audioMessage) {
+            messageContent = "[Áudio]";
+          } else if (message.message?.videoMessage) {
+            messageContent = message.message.videoMessage.caption || "[Vídeo]";
+          } else if (message.message?.documentMessage) {
+            messageContent = message.message.documentMessage.caption || "[Documento]";
+          } else if (message.message?.stickerMessage) {
+            messageContent = "[Figurinha]";
+          }
+
+          // Atualizar apenas o contador de mensagens não lidas no banco (não a última mensagem)
+          try {
+            if (isIncoming) {
+              await prisma.chat.updateMany({
+                where: { id: chatId },
+                data: {
+                  unreadCount: {
+                    increment: 1
+                  }
+                }
+              });
+            }
+            console.log(`Contador atualizado para chat ${chatId}: ${messageContent} (${isIncoming ? 'recebida' : 'enviada'})`);
+          } catch (error) {
+            console.error(`Erro ao atualizar contador para chat ${chatId}:`, error);
+          }
+
+          payload = {
+            ...payload,
+            message: {
+              content: messageContent,
+              isIncoming,
+              timestamp: message.messageTimestamp,
+              sender: isIncoming ? "customer" : "agent"
+            }
+          };
+        }
+
         await pusherServer.trigger(channelName, eventName, payload);
         console.log(`Pusher event '${eventName}' triggered on channel '${channelName}' for Evolution event '${webhookData.event}'`);
       }
