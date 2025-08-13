@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Users, UserPlus, Shield, User, MessageSquare } from "lucide-react"
+import { Plus, Edit, Trash2, Users, UserPlus, Shield, User, MessageSquare, Mail, Calendar } from "lucide-react"
 import { UserContactsModal } from "./user-contacts-modal"
 
 interface UserManagementUser {
@@ -133,16 +133,20 @@ export function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-purple">
-        <CardHeader>
+      <Card className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-0 shadow-xl theme-smooth">
+        <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 gradient-purple rounded-xl flex items-center justify-center shadow-purple">
-                <Users className="h-5 w-5 text-white" />
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+                <Users className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl font-semibold">Gerenciamento de Usuários</CardTitle>
-                <CardDescription>Gerencie os usuários do sistema</CardDescription>
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+                  Gerenciamento de Usuários
+                </CardTitle>
+                <CardDescription className="text-base text-gray-600 dark:text-gray-400">
+                  Gerencie os usuários do sistema
+                </CardDescription>
               </div>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -152,46 +156,48 @@ export function UserManagement() {
                     setEditingUser(null)
                     setFormData({ name: "", email: "", password: "", role: "agent" })
                   }}
-                  className="gradient-purple hover:opacity-90 shadow-purple"
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Usuário
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50">
+              <DialogContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center space-x-2">
-                    <UserPlus className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <DialogTitle className="flex items-center space-x-2 text-xl">
+                    <UserPlus className="h-6 w-6 text-purple-600" />
                     <span>{editingUser ? "Editar Usuário" : "Novo Usuário"}</span>
                   </DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-base">
                     {editingUser ? "Edite as informações do usuário" : "Adicione um novo usuário ao sistema"}
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nome</Label>
+                    <Label htmlFor="name" className="text-sm font-medium">Nome Completo</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
-                      className="border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600"
+                      className="h-12 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800"
+                      placeholder="Digite o nome completo"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       required
-                      className="border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600"
+                      className="h-12 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800"
+                      placeholder="usuario@exemplo.com"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">
+                    <Label htmlFor="password" className="text-sm font-medium">
                       {editingUser ? "Nova Senha (deixe em branco para manter)" : "Senha"}
                     </Label>
                     <Input
@@ -200,16 +206,17 @@ export function UserManagement() {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       required={!editingUser}
-                      className="border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600"
+                      className="h-12 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800"
+                      placeholder="••••••••"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="role">Função</Label>
+                    <Label htmlFor="role" className="text-sm font-medium">Função</Label>
                     <Select
                       value={formData.role}
                       onValueChange={(value: "admin" | "agent") => setFormData({ ...formData, role: value })}
                     >
-                      <SelectTrigger className="border-purple-200/50 dark:border-purple-800/50">
+                      <SelectTrigger className="h-12 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -218,11 +225,11 @@ export function UserManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <div className="flex justify-end space-x-3 pt-6">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="px-6">
                       Cancelar
                     </Button>
-                    <Button type="submit" className="gradient-purple hover:opacity-90">
+                    <Button type="submit" className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 px-6">
                       {editingUser ? "Atualizar" : "Criar"}
                     </Button>
                   </div>
@@ -236,30 +243,43 @@ export function UserManagement() {
             {users.map((user) => (
               <div
                 key={user.id}
-                className="flex items-center justify-between p-6 border border-purple-200/30 dark:border-purple-800/30 rounded-xl bg-white/40 dark:bg-gray-800/40 hover:bg-white/60 dark:hover:bg-gray-800/60 transition-all duration-200"
+                className="flex items-center justify-between p-6 border border-gray-200/30 dark:border-gray-800/30 rounded-xl bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 <div className="flex items-center space-x-4">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      user.role === "admin" ? "gradient-purple shadow-purple" : "bg-blue-100 dark:bg-blue-900/30"
+                    className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-lg ${
+                      user.role === "admin" 
+                        ? "bg-gradient-to-br from-purple-600 to-purple-700" 
+                        : "bg-gradient-to-br from-blue-500 to-blue-600"
                     }`}
                   >
                     {user.role === "admin" ? (
-                      <Shield className="h-6 w-6 text-white" />
+                      <Shield className="h-7 w-7 text-white" />
                     ) : (
-                      <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      <User className="h-7 w-7 text-white" />
                     )}
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
-                    <div className="flex items-center space-x-2 mt-2">
+                    <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">{user.name}</p>
+                    <div className="flex items-center space-x-3 mt-1">
+                      <div className="flex items-center space-x-1">
+                        <Mail className="h-3 w-3 text-gray-500" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="h-3 w-3 text-gray-500" />
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Criado em {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-3">
                       <Badge
                         variant={user.role === "admin" ? "default" : "secondary"}
                         className={
                           user.role === "admin"
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            ? "bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-900/30 dark:to-purple-800/30 dark:text-purple-300 border-0 px-3 py-1 font-medium"
+                            : "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 dark:from-blue-900/30 dark:to-blue-800/30 dark:text-blue-300 border-0 px-3 py-1 font-medium"
                         }
                       >
                         {user.role === "admin" ? "Administrador" : "Agente"}
@@ -268,8 +288,8 @@ export function UserManagement() {
                         variant={user.status === "active" ? "default" : "destructive"}
                         className={
                           user.status === "active"
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            ? "bg-gradient-to-r from-green-100 to-green-200 text-green-700 dark:from-green-900/30 dark:to-green-800/30 dark:text-green-400 border-0 px-3 py-1 font-medium"
+                            : "bg-gradient-to-r from-red-100 to-red-200 text-red-700 dark:from-red-900/30 dark:to-red-800/30 dark:text-red-400 border-0 px-3 py-1 font-medium"
                         }
                       >
                         {user.status === "active" ? "Ativo" : "Inativo"}
@@ -282,28 +302,31 @@ export function UserManagement() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleViewContacts(user)}
-                    className="border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 dark:border-blue-800 dark:hover:bg-blue-950/50"
+                    className="h-10 px-3 border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 dark:border-blue-800 dark:hover:bg-blue-950/50 font-medium"
                     title="Ver contatos"
                   >
-                    <MessageSquare className="h-4 w-4" />
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Contatos
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEdit(user)}
-                    className="border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50"
+                    className="h-10 px-3 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 font-medium"
                     title="Editar usuário"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDelete(user.id)}
-                    className="border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950/50"
+                    className="h-10 px-3 border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 dark:border-red-800 dark:hover:bg-red-950/50 font-medium"
                     title="Excluir usuário"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
                   </Button>
                 </div>
               </div>

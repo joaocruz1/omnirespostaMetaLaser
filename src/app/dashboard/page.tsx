@@ -7,7 +7,7 @@ import Pusher from 'pusher-js';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Users, Settings, LogOut } from "lucide-react";
+import { MessageSquare, Users, Settings, LogOut, Bell, Package } from "lucide-react";
 import { ChatList } from "@/components/chat-list";
 import { ChatWindow } from "@/components/chat-window";
 import { UserManagement } from "@/components/user-management";
@@ -295,55 +295,63 @@ export default function DashboardPage() {
   if (!user) return null;
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-purple-50/30 dark:to-purple-950/20">
-      <header className="flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-purple-200/50 dark:border-purple-800/50 shadow-sm">
-        <div className="px-4 py-3">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-purple-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-purple-950/20 theme-smooth">
+      {/* Header melhorado */}
+      <header className="flex-shrink-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm">
+        <div className="px-6 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-4">
                 <div className="flex items-center justify-center">
-                  {/* Usa o ícone conforme o tema */}
                   <Image
                     src={iconSrc}
                     alt="OmniResposta MetaLaser"
-                    width={60}
-                    height={60}
+                    width={48}
+                    height={48}
                     priority
+                    className="rounded-xl shadow-sm"
                   />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
                     OmniResposta MetaLaser
                   </h1>
-                  <p className="text-sm text-muted-foreground">Sistema de AI Chat</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Sistema de AI Chat</p>
                 </div>
               </div>
-              <Badge
-                variant="secondary"
-                className="bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-              >
-                {user.role === "admin" ? "Administrador" : "Agente"}
-              </Badge>
+              <div className="flex items-center space-x-3">
+                <Badge
+                  variant="secondary"
+                  className="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-700 dark:from-purple-900/50 dark:to-purple-800/50 dark:text-purple-300 border-0 px-3 py-1"
+                >
+                  {user.role === "admin" ? "Administrador" : "Agente"}
+                </Badge>
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Bell className="h-4 w-4" />
+                  <span>Ativo</span>
+                </div>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-foreground">Olá, {user.name}</p>
-                <p className="text-xs text-muted-foreground">Bem-vindo de volta</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Olá, {user.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Bem-vindo de volta</p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.open('https://system-porteira.vercel.app/dashboard', '_blank')}
-                className="border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/50 bg-transparent text-green-700 dark:text-green-300"
+                className="border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/50 bg-transparent text-green-700 dark:text-green-300 font-medium"
               >
-                📦 Sistema de Estoque
+                <Package className="h-4 w-4 mr-2" />
+                Sistema de Estoque
               </Button>
               <ThemeToggle />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={logout}
-                className="border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                className="border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950/50 bg-transparent text-red-600 dark:text-red-400 font-medium"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sair
@@ -353,13 +361,13 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col min-h-0 px-4 py-4">
+      <div className="flex-1 flex flex-col min-h-0 px-6 py-6">
         <div className="flex-1 min-h-0">
           <Tabs defaultValue="chats" className="h-full flex flex-col">
-            <TabsList className="flex-shrink-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border border-purple-200/50 dark:border-purple-800/50 shadow-sm">
+            <TabsList className="flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-800/50 shadow-sm rounded-xl p-1">
               <TabsTrigger
                 value="chats"
-                className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-300"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-purple-700 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-6 py-2 font-medium transition-all duration-200"
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Conversas
@@ -368,14 +376,14 @@ export default function DashboardPage() {
                 <>
                   <TabsTrigger
                     value="users"
-                    className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-300"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-purple-700 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-6 py-2 font-medium transition-all duration-200"
                   >
                     <Users className="h-4 w-4 mr-2" />
                     Usuários
                   </TabsTrigger>
                   <TabsTrigger
                     value="settings"
-                    className="data-[state=active]:bg-purple-100 data-[state=active]:text-purple-700 dark:data-[state=active]:bg-purple-900/50 dark:data-[state=active]:text-purple-300"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-purple-700 data-[state=active]:text-white data-[state=active]:shadow-md rounded-lg px-6 py-2 font-medium transition-all duration-200"
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Configurações
@@ -384,7 +392,7 @@ export default function DashboardPage() {
               )}
             </TabsList>
 
-            <TabsContent value="chats" className="flex-1 mt-4 min-h-0">
+            <TabsContent value="chats" className="flex-1 mt-6 min-h-0">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
                 <div className="lg:col-span-1 min-h-0">
                   <ChatList

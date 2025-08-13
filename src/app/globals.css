@@ -164,6 +164,68 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Transição suave para mudanças de tema */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Transições suaves para elementos que mudam com o tema */
+  body, div, section, article, aside, header, footer, nav, main {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Exceções para elementos que não devem ter transição */
+  img, svg, canvas, video, iframe {
+    transition: none;
+  }
+
+  /* Transição específica para o botão de tema */
+  .theme-toggle-button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .theme-toggle-button:hover {
+    transform: scale(1.05);
+  }
+
+  .theme-toggle-button:active {
+    transform: scale(0.95);
+  }
+
+  /* Animação de shimmer para transição de tema */
+  @keyframes theme-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: theme-shimmer 0.6s ease-in-out;
+  }
+
+  /* Transição suave para mudanças de tema em elementos específicos */
+  .theme-transition {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Efeito de fade para transições de tema */
+  .theme-fade {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  /* Classe para elementos que devem ter transição de tema otimizada */
+  .theme-smooth {
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Prevenção de transições em elementos que não devem ter */
+  .no-theme-transition {
+    transition: none !important;
   }
 }
 
@@ -245,4 +307,1314 @@
   .shadow-green {
     box-shadow: 0 4px 20px -2px oklch(0.55 0.25 140 / 0.15);
   }
+}
+
+/* Animações personalizadas */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Classes de animação */
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Gradientes personalizados */
+.gradient-purple {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-purple-light {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.gradient-purple-dark {
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+}
+
+/* Efeitos de hover e transições */
+.hover-lift {
+  transition: all 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.hover-scale {
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Scrollbar personalizada */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.7);
+}
+
+/* Efeitos de glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Efeitos de loading */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .loading-skeleton {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Efeitos de notificação */
+.notification-badge {
+  animation: bounce 1s infinite;
+}
+
+.notification-badge::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+/* Efeitos de mensagem */
+.message-bubble {
+  position: relative;
+  overflow: hidden;
+}
+
+.message-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.message-bubble:hover::before {
+  transform: translateX(100%);
+}
+
+/* Efeitos de botão */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-glow:hover::before {
+  left: 100%;
+}
+
+/* Efeitos de card */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeitos de input */
+.input-focus {
+  transition: all 0.3s ease;
+}
+
+.input-focus:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Efeitos de badge */
+.badge-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Efeitos de avatar */
+.avatar-ring {
+  position: relative;
+}
+
+.avatar-ring::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  background: linear-gradient(45deg, #667eea, #764ba2) border-box;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Efeitos de status */
+.status-dot {
+  position: relative;
+}
+
+.status-dot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse 2s infinite;
+}
+
+/* Efeitos de loading */
+.loading-dots {
+  display: inline-block;
+}
+
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(5, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% {
+    content: '';
+  }
+  40% {
+    content: '.';
+  }
+  60% {
+    content: '..';
+  }
+  80%, 100% {
+    content: '...';
+  }
+}
+
+/* Efeitos de transição de página */
+.page-transition {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Efeitos de modal */
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Efeitos de tooltip */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover::before {
+  opacity: 1;
+}
+
+/* Efeitos de progress */
+.progress-bar {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Efeitos de notificação toast */
+.toast-enter {
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast-exit {
+  animation: fadeIn 0.3s ease-out reverse;
+}
+
+/* Efeitos de chat */
+.chat-message {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.chat-message:nth-child(even) {
+  animation-delay: 0.1s;
+}
+
+.chat-message:nth-child(odd) {
+  animation-delay: 0.2s;
+}
+
+/* Efeitos de lista */
+.list-item {
+  animation: slideIn 0.3s ease-out;
+}
+
+.list-item:nth-child(1) { animation-delay: 0.1s; }
+.list-item:nth-child(2) { animation-delay: 0.2s; }
+.list-item:nth-child(3) { animation-delay: 0.3s; }
+.list-item:nth-child(4) { animation-delay: 0.4s; }
+.list-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* Efeitos de hover para cards de chat */
+.chat-card {
+  transition: all 0.2s ease;
+}
+
+.chat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.chat-card.selected {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* Efeitos de botão de envio */
+.send-button {
+  transition: all 0.2s ease;
+}
+
+.send-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.send-button:active {
+  transform: scale(0.95);
+}
+
+/* Efeitos de status de mensagem */
+.message-status {
+  transition: all 0.3s ease;
+}
+
+.message-status:hover {
+  transform: scale(1.2);
+}
+
+/* Efeitos de filtros */
+.filter-button {
+  transition: all 0.2s ease;
+}
+
+.filter-button:hover {
+  transform: translateY(-1px);
+}
+
+.filter-button.active {
+  animation: pulse 2s infinite;
+}
+
+/* Efeitos de dropdown */
+.dropdown-menu {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.dropdown-item {
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  transform: translateX(4px);
+}
+
+/* Efeitos de input de busca */
+.search-input {
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+/* Efeitos de badge de notificação */
+.notification-badge {
+  animation: bounce 1s infinite;
+}
+
+.notification-badge::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+/* Efeitos de loading para imagens */
+.image-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .image-loading {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Efeitos de transição suave para mudanças de tema */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Efeitos de hover para botões de ação */
+.action-button {
+  transition: all 0.2s ease;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-button:active {
+  transform: translateY(0);
+}
+
+/* Efeitos de focus para acessibilidade */
+.focus-ring:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* Efeitos de loading para botões */
+.button-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.button-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+/* Efeitos de hover para links */
+.link-hover {
+  position: relative;
+}
+
+.link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+.link-hover:hover::after {
+  width: 100%;
+}
+
+/* Efeitos de scroll suave */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Efeitos de seleção de texto */
+::selection {
+  background: rgba(139, 92, 246, 0.2);
+  color: inherit;
+}
+
+/* Efeitos de placeholder */
+.placeholder-animate {
+  animation: pulse 2s infinite;
+}
+
+/* Efeitos de erro */
+.error-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Efeitos de sucesso */
+.success-bounce {
+  animation: bounce 0.6s ease-in-out;
+}
+
+/* Efeitos de warning */
+.warning-pulse {
+  animation: pulse 1s infinite;
+}
+
+/* Efeitos de info */
+.info-glow {
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+/* Efeitos de dark mode toggle */
+.theme-toggle {
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: rotate(180deg);
+}
+
+/* Efeitos de sidebar */
+.sidebar-slide {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Efeitos de header */
+.header-sticky {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.dark .header-sticky {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Efeitos de footer */
+.footer-fade {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Efeitos de grid */
+.grid-fade {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.grid-fade:nth-child(1) { animation-delay: 0.1s; }
+.grid-fade:nth-child(2) { animation-delay: 0.2s; }
+.grid-fade:nth-child(3) { animation-delay: 0.3s; }
+.grid-fade:nth-child(4) { animation-delay: 0.4s; }
+
+/* Efeitos de tabela */
+.table-row {
+  transition: all 0.2s ease;
+}
+
+.table-row:hover {
+  background: rgba(139, 92, 246, 0.05);
+  transform: scale(1.01);
+}
+
+/* Efeitos de formulário */
+.form-group {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.1s; }
+.form-group:nth-child(2) { animation-delay: 0.2s; }
+.form-group:nth-child(3) { animation-delay: 0.3s; }
+
+/* Efeitos de validação */
+.input-valid {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.input-invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Efeitos de carregamento de dados */
+.data-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.data-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f4f6;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Efeitos de transição de estado */
+.state-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efeitos de hover para cards informativos */
+.info-card {
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeitos de hover para botões de navegação */
+.nav-button {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.nav-button:hover::before {
+  left: 100%;
+}
+
+.nav-button:hover {
+  transform: translateY(-2px);
+}
+
+/* Efeitos de hover para ícones */
+.icon-hover {
+  transition: all 0.2s ease;
+}
+
+.icon-hover:hover {
+  transform: scale(1.2) rotate(5deg);
+}
+
+/* Efeitos de hover para badges */
+.badge-hover {
+  transition: all 0.2s ease;
+}
+
+.badge-hover:hover {
+  transform: scale(1.1);
+}
+
+/* Efeitos de hover para avatares */
+.avatar-hover {
+  transition: all 0.3s ease;
+}
+
+.avatar-hover:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Efeitos de hover para inputs */
+.input-hover {
+  transition: all 0.3s ease;
+}
+
+.input-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeitos de hover para selects */
+.select-hover {
+  transition: all 0.3s ease;
+}
+
+.select-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeitos de hover para textareas */
+.textarea-hover {
+  transition: all 0.3s ease;
+}
+
+.textarea-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeitos de hover para checkboxes */
+.checkbox-hover {
+  transition: all 0.2s ease;
+}
+
+.checkbox-hover:hover {
+  transform: scale(1.1);
+}
+
+/* Efeitos de hover para radio buttons */
+.radio-hover {
+  transition: all 0.2s ease;
+}
+
+.radio-hover:hover {
+  transform: scale(1.1);
+}
+
+/* Efeitos de hover para switches */
+.switch-hover {
+  transition: all 0.2s ease;
+}
+
+.switch-hover:hover {
+  transform: scale(1.05);
+}
+
+/* Efeitos de hover para sliders */
+.slider-hover {
+  transition: all 0.2s ease;
+}
+
+.slider-hover:hover {
+  transform: scale(1.05);
+}
+
+/* Efeitos de hover para progress bars */
+.progress-hover {
+  transition: all 0.3s ease;
+}
+
+.progress-hover:hover {
+  transform: scaleY(1.2);
+}
+
+/* Efeitos de hover para tooltips */
+.tooltip-hover {
+  transition: all 0.2s ease;
+}
+
+.tooltip-hover:hover {
+  transform: scale(1.05);
+}
+
+/* Efeitos de hover para popovers */
+.popover-hover {
+  transition: all 0.2s ease;
+}
+
+.popover-hover:hover {
+  transform: scale(1.02);
+}
+
+/* Efeitos de hover para modals */
+.modal-hover {
+  transition: all 0.3s ease;
+}
+
+.modal-hover:hover {
+  transform: scale(1.02);
+}
+
+/* Efeitos de hover para drawers */
+.drawer-hover {
+  transition: all 0.3s ease;
+}
+
+.drawer-hover:hover {
+  transform: translateX(5px);
+}
+
+/* Efeitos de hover para accordions */
+.accordion-hover {
+  transition: all 0.2s ease;
+}
+
+.accordion-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para tabs */
+.tab-hover {
+  transition: all 0.2s ease;
+}
+
+.tab-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para breadcrumbs */
+.breadcrumb-hover {
+  transition: all 0.2s ease;
+}
+
+.breadcrumb-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para pagination */
+.pagination-hover {
+  transition: all 0.2s ease;
+}
+
+.pagination-hover:hover {
+  transform: scale(1.1);
+}
+
+/* Efeitos de hover para alerts */
+.alert-hover {
+  transition: all 0.2s ease;
+}
+
+.alert-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para callouts */
+.callout-hover {
+  transition: all 0.2s ease;
+}
+
+.callout-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para code blocks */
+.code-hover {
+  transition: all 0.2s ease;
+}
+
+.code-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para blockquotes */
+.blockquote-hover {
+  transition: all 0.2s ease;
+}
+
+.blockquote-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para tables */
+.table-hover {
+  transition: all 0.2s ease;
+}
+
+.table-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para lists */
+.list-hover {
+  transition: all 0.2s ease;
+}
+
+.list-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para navigation menus */
+.nav-menu-hover {
+  transition: all 0.2s ease;
+}
+
+.nav-menu-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para sidebars */
+.sidebar-hover {
+  transition: all 0.2s ease;
+}
+
+.sidebar-hover:hover {
+  transform: translateX(5px);
+}
+
+/* Efeitos de hover para headers */
+.header-hover {
+  transition: all 0.2s ease;
+}
+
+.header-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para footers */
+.footer-hover {
+  transition: all 0.2s ease;
+}
+
+.footer-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para main content */
+.main-hover {
+  transition: all 0.2s ease;
+}
+
+.main-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para containers */
+.container-hover {
+  transition: all 0.2s ease;
+}
+
+.container-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para sections */
+.section-hover {
+  transition: all 0.2s ease;
+}
+
+.section-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para articles */
+.article-hover {
+  transition: all 0.2s ease;
+}
+
+.article-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para asides */
+.aside-hover {
+  transition: all 0.2s ease;
+}
+
+.aside-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para figures */
+.figure-hover {
+  transition: all 0.2s ease;
+}
+
+.figure-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para figcaptions */
+.figcaption-hover {
+  transition: all 0.2s ease;
+}
+
+.figcaption-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para details */
+.details-hover {
+  transition: all 0.2s ease;
+}
+
+.details-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para summaries */
+.summary-hover {
+  transition: all 0.2s ease;
+}
+
+.summary-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para marks */
+.mark-hover {
+  transition: all 0.2s ease;
+}
+
+.mark-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para times */
+.time-hover {
+  transition: all 0.2s ease;
+}
+
+.time-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para addresses */
+.address-hover {
+  transition: all 0.2s ease;
+}
+
+.address-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para abbrs */
+.abbr-hover {
+  transition: all 0.2s ease;
+}
+
+.abbr-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para acronyms */
+.acronym-hover {
+  transition: all 0.2s ease;
+}
+
+.acronym-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para bdos */
+.bdo-hover {
+  transition: all 0.2s ease;
+}
+
+.bdo-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para bdis */
+.bdi-hover {
+  transition: all 0.2s ease;
+}
+
+.bdi-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para brs */
+.br-hover {
+  transition: all 0.2s ease;
+}
+
+.br-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para cites */
+.cite-hover {
+  transition: all 0.2s ease;
+}
+
+.cite-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para codes */
+.code-hover {
+  transition: all 0.2s ease;
+}
+
+.code-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para data elements */
+.data-hover {
+  transition: all 0.2s ease;
+}
+
+.data-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para dfns */
+.dfn-hover {
+  transition: all 0.2s ease;
+}
+
+.dfn-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para ems */
+.em-hover {
+  transition: all 0.2s ease;
+}
+
+.em-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para i elements */
+.i-hover {
+  transition: all 0.2s ease;
+}
+
+.i-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para kbd elements */
+.kbd-hover {
+  transition: all 0.2s ease;
+}
+
+.kbd-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para samp elements */
+.samp-hover {
+  transition: all 0.2s ease;
+}
+
+.samp-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para small elements */
+.small-hover {
+  transition: all 0.2s ease;
+}
+
+.small-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para span elements */
+.span-hover {
+  transition: all 0.2s ease;
+}
+
+.span-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para strong elements */
+.strong-hover {
+  transition: all 0.2s ease;
+}
+
+.strong-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para sub elements */
+.sub-hover {
+  transition: all 0.2s ease;
+}
+
+.sub-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para sup elements */
+.sup-hover {
+  transition: all 0.2s ease;
+}
+
+.sup-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para var elements */
+.var-hover {
+  transition: all 0.2s ease;
+}
+
+.var-hover:hover {
+  transform: translateY(-1px);
+}
+
+/* Efeitos de hover para wbr elements */
+.wbr-hover {
+  transition: all 0.2s ease;
+}
+
+.wbr-hover:hover {
+  transform: translateY(-1px);
 }

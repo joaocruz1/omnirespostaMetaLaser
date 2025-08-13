@@ -30,6 +30,8 @@ import {
   Bot,
   BotOff,
   Volume2,
+  Phone,
+  Calendar,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
@@ -657,14 +659,14 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
 
   if (!chat) {
     return (
-      <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
+      <Card className="h-full flex flex-col bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-0 shadow-xl theme-smooth">
         <CardContent className="flex items-center justify-center h-full">
-          <div className="text-center text-muted-foreground">
-            <div className="w-16 h-16 gradient-purple-light rounded-xl flex items-center justify-center mx-auto mb-3">
-              <MessageSquare className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          <div className="text-center text-gray-500 dark:text-gray-400">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <MessageSquare className="h-10 w-10 text-purple-600 dark:text-purple-400" />
             </div>
-            <h3 className="text-base font-semibold mb-1">Selecione uma conversa</h3>
-            <p className="text-sm">Escolha uma conversa da lista para começar</p>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Selecione uma conversa</h3>
+            <p className="text-sm">Escolha uma conversa da lista para começar a conversar</p>
           </div>
         </CardContent>
       </Card>
@@ -672,29 +674,30 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
   }
 
   return (
-    <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
-      <CardHeader className="flex-shrink-0 border-b border-purple-200/30 dark:border-purple-800/30 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30 px-4 py-3">
+    <Card className="h-full flex flex-col bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-0 shadow-xl theme-smooth">
+      {/* Header melhorado */}
+      <CardHeader className="flex-shrink-0 border-b border-gray-200/30 dark:border-gray-800/30 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-950/30 dark:to-pink-950/30 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <div 
-              className="w-10 h-10 gradient-purple rounded-lg flex items-center justify-center shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+              className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => setShowContactInfo(true)}
             >
               {chat.profilePicUrl ? (
                 <img
                   src={chat.profilePicUrl || "/placeholder.svg"}
                   alt="Foto de Perfil"
-                  className="w-10 h-10 rounded-lg object-cover"
+                  className="w-12 h-12 rounded-xl object-cover"
                   loading="lazy"
                 />
               ) : (
-                <User className="h-5 w-5 text-white" />
+                <User className="h-6 w-6 text-white" />
               )}
             </div>
             <div>
               <div className="flex items-center space-x-2">
                 <CardTitle 
-                  className="text-base font-semibold cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                  className="text-lg font-semibold cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                   onClick={() => setShowContactInfo(true)}
                 >
                   {chat.isSavedContact === true 
@@ -703,16 +706,19 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                   }
                 </CardTitle>
                 {chat.isSavedContact === false && (
-                  <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+                  <Badge variant="outline" className="text-xs px-2 py-0 h-5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30">
                     Não Salvo
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center space-x-2 mt-0.5">
-                <span className="text-xs text-muted-foreground">
-                  {chat.id.split('@')[0]}
-                </span>
-                <Badge variant="outline" className={cn("text-xs px-2 py-0 h-5", getStatusColor(chat.status))}>
+              <div className="flex items-center space-x-3 mt-1">
+                <div className="flex items-center space-x-2">
+                  <Phone className="h-3 w-3 text-gray-500" />
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                    {chat.id.split('@')[0]}
+                  </span>
+                </div>
+                <Badge variant="outline" className={cn("text-xs px-2 py-0 h-5 font-medium", getStatusColor(chat.status))}>
                   <Circle
                     className={cn(
                       "w-1.5 h-1.5 fill-current mr-1",
@@ -727,11 +733,11 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 </Badge>
               </div>
               {chat.assignedTo && (
-                <div className="flex items-center space-x-1 mt-1">
+                <div className="flex items-center space-x-2 mt-2">
                   <Badge
                     variant="outline"
                     className={cn(
-                      "text-xs px-2 py-0 h-5",
+                      "text-xs px-2 py-0 h-5 font-medium",
                       chat.assignedTo === "Agente IA"
                         ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800"
                         : "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
@@ -747,14 +753,14 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <Select onValueChange={transferChat}>
-              <SelectTrigger className="w-32 h-8 text-xs border-purple-200 dark:border-purple-800">
+              <SelectTrigger className="w-36 h-9 text-sm border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80">
                 <SelectValue placeholder="Transferir" />
               </SelectTrigger>
               <SelectContent>
                 {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id} className="text-xs">
+                  <SelectItem key={u.id} value={u.id} className="text-sm">
                     {u.name}
                   </SelectItem>
                 ))}
@@ -777,16 +783,16 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 }
               }}
               className={cn(
-                "h-8 px-2",
+                "h-9 px-3 font-medium",
                 isAiEnabled
                   ? "border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
-                  : "bg-red-500 text-white border-red-500 hover:bg-red-600",
+                  : "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-500 hover:from-red-600 hover:to-red-700",
               )}
             >
               {isAiEnabled ? (
-                <Bot className="h-3 w-3 mr-1" />
+                <Bot className="h-4 w-4 mr-1" />
               ) : (
-                <BotOff className="h-3 w-3 mr-1" />
+                <BotOff className="h-4 w-4 mr-1" />
               )}
               {isAiEnabled ? "IA Ativa" : "IA Inativa"}
             </Button>
@@ -795,22 +801,22 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                  className="h-9 w-9 p-0 border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 bg-transparent rounded-lg"
                 >
-                  <MoreVertical className="h-3 w-3" />
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => updateChatStatus("active")} className="text-xs">
-                  <UserCheck className="h-3 w-3 mr-2" />
+              <DropdownMenuContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
+                <DropdownMenuItem onClick={() => updateChatStatus("active")} className="text-sm">
+                  <UserCheck className="h-4 w-4 mr-2" />
                   Marcar como Ativo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => updateChatStatus("waiting")} className="text-xs">
-                  <UserX className="h-3 w-3 mr-2" />
+                <DropdownMenuItem onClick={() => updateChatStatus("waiting")} className="text-sm">
+                  <UserX className="h-4 w-4 mr-2" />
                   Marcar como Aguardando
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => updateChatStatus("closed")} className="text-xs">
-                  <Archive className="h-3 w-3 mr-2" />
+                <DropdownMenuItem onClick={() => updateChatStatus("closed")} className="text-sm">
+                  <Archive className="h-4 w-4 mr-2" />
                   Finalizar Conversa
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -822,13 +828,13 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden relative">
         <div className="flex-1 min-h-0">
           <ScrollArea ref={scrollAreaRef} className="h-full scrollbar-thin">
-            <div className="p-4 space-y-3">
+            <div className="p-6 space-y-4">
               {/* Mensagem informativa quando chat está atribuído ao Agente IA */}
               {chat.assignedTo === "Agente IA" && (
                 <div className="text-center">
-                  <div className="inline-flex items-center space-x-2 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-2 text-sm text-orange-700 dark:text-orange-300">
-                    <Bot className="h-4 w-4" />
-                    <span>Esta conversa está sendo atendida pelo Agente IA. Envie uma mensagem para assumir o atendimento.</span>
+                  <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-xl px-6 py-3 text-sm text-orange-700 dark:text-orange-300">
+                    <Bot className="h-5 w-5" />
+                    <span className="font-medium">Esta conversa está sendo atendida pelo Agente IA. Envie uma mensagem para assumir o atendimento.</span>
                   </div>
                 </div>
               )}
@@ -841,11 +847,11 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                     disabled={messagesLoading}
                     variant="outline"
                     size="sm"
-                    className="text-xs bg-transparent"
+                    className="text-sm bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     {messagesLoading ? (
                       <>
-                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Carregando...
                       </>
                     ) : (
@@ -863,10 +869,10 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 >
                   <div
                     className={cn(
-                      "max-w-xs lg:max-w-md px-3 py-2 rounded-2xl shadow-sm text-sm relative",
+                      "max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm text-sm relative",
                       message.sender === "agent"
-                        ? "gradient-purple text-white shadow-purple/20 rounded-br-none"
-                        : "bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900/50 rounded-bl-none",
+                        ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg rounded-br-none"
+                        : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-bl-none shadow-sm",
                     )}
                   >
                     {/* Renderização otimizada de mídia */}
@@ -886,7 +892,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                               />
                             )}
                             {message.type === "audio" && (
-                              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-w-xs">
+                              <div className="bg-black/10 dark:bg-white/10 rounded-lg p-3 max-w-xs">
                                 <audio src={message.mediaUrl} preload="metadata" />
                                 <div className="flex items-center space-x-3 mb-3">
                                   <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
@@ -905,7 +911,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                               <video src={message.mediaUrl} controls className="w-full max-h-64 rounded-lg" />
                             )}
                             {message.type === "location" && (
-                              <div className="flex items-center gap-2 p-2 bg-black/10 rounded-md">
+                              <div className="flex items-center gap-2 p-2 bg-black/10 dark:bg-white/10 rounded-md">
                                 <MapPin className="h-4 w-4" />
                                 <span>Localização compartilhada</span>
                                 {message.mediaUrl && (
@@ -926,7 +932,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 download={message.content || "documento"}
-                                className="flex items-center gap-2 p-2 bg-black/10 rounded-md hover:bg-black/20 transition-colors"
+                                className="flex items-center gap-2 p-2 bg-black/10 dark:bg-white/10 rounded-md hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
                               >
                                 <Paperclip className="h-4 w-4" />
                                 <span className="underline">{message.content || "Baixar Documento"}</span>
@@ -951,11 +957,11 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                     )}
 
                     {/* Timestamp e Status */}
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end mt-2">
                       <p
                         className={cn(
-                          "text-xs mt-1",
-                          message.sender === "agent" ? "text-purple-100" : "text-muted-foreground",
+                          "text-xs",
+                          message.sender === "agent" ? "text-purple-100" : "text-gray-500 dark:text-gray-400",
                         )}
                       >
                         {message.timestamp}
@@ -968,8 +974,11 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
 
               {/* Loading inicial */}
               {messagesLoading && page === 1 && (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="flex justify-center py-8">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Carregando mensagens...</span>
+                  </div>
                 </div>
               )}
 
@@ -981,22 +990,22 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
         {/* Botão para scroll para baixo */}
         <Button
           onClick={scrollToBottom}
-          className="absolute bottom-20 right-4 rounded-full w-10 h-10 p-0 shadow-lg z-10"
+          className="absolute bottom-24 right-6 rounded-full w-12 h-12 p-0 shadow-lg z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"
           variant="secondary"
           size="sm"
         >
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="h-5 w-5" />
         </Button>
 
-        {/* Área de input */}
-        <div className="border-t border-purple-200/30 dark:border-purple-800/30 p-4 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
+        {/* Área de input melhorada */}
+        <div className="border-t border-gray-200/30 dark:border-gray-800/30 p-6 bg-gradient-to-r from-purple-50/30 to-pink-50/30 dark:from-purple-950/20 dark:to-pink-950/20">
           <form 
             onSubmit={(e) => {
               e.preventDefault()
               e.stopPropagation()
               sendMessage()
             }}
-            className="flex items-end space-x-2"
+            className="flex items-end space-x-3"
           >
             <div className="flex-1">
               <Textarea
@@ -1011,12 +1020,12 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                     sendMessage()
                   }
                 }}
-                className="min-h-[40px] max-h-24 resize-none text-sm bg-white dark:bg-gray-800 border border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600 rounded-full px-4 py-2"
+                className="min-h-[48px] max-h-32 resize-none text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 rounded-xl px-4 py-3 shadow-sm"
                 disabled={loading}
                 autoFocus
               />
             </div>
-            <div className="flex space-x-1">
+            <div className="flex space-x-2">
               <Button
                 onClick={(e) => {
                   e.preventDefault()
@@ -1025,15 +1034,15 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 }}
                 disabled={loading || !newMessage.trim()}
                 size="sm"
-                className="h-8 w-8 p-0 rounded-full gradient-purple hover:opacity-90 shadow-sm"
+                className="h-12 w-12 p-0 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg hover:shadow-xl transition-all duration-200"
                 type="button"
               >
-                {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0 rounded-full border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                className="h-12 w-12 p-0 rounded-xl border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 bg-white dark:bg-gray-800 shadow-sm"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -1042,7 +1051,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 disabled={loading}
                 type="button"
               >
-                <Paperclip className="h-3 w-3" />
+                <Paperclip className="h-5 w-5" />
               </Button>
               <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
             </div>

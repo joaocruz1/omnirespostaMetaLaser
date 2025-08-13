@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, RefreshCw, User, MessageCircle, Plus, Save, Edit } from "lucide-react"
+import { Search, RefreshCw, User, MessageCircle, Plus, Save, Edit, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/components/auth-provider"
@@ -204,12 +204,16 @@ export function ChatList({
   })
 
   return (
-    <Card className="h-full flex flex-col bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm border-purple-200/50 dark:border-purple-800/50 shadow-sm">
-      <CardHeader className="flex-shrink-0 pb-3 px-4 pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <CardTitle className="text-base font-semibold flex items-center space-x-2">
-            <MessageCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            <span>Conversas</span>
+    <Card className="h-full flex flex-col bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-0 shadow-xl theme-smooth">
+      <CardHeader className="flex-shrink-0 pb-4 px-6 pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <CardTitle className="text-lg font-semibold flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg flex items-center justify-center">
+              <MessageCircle className="h-4 w-4 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+              Conversas
+            </span>
           </CardTitle>
           <div className="flex items-center space-x-2">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -217,41 +221,46 @@ export function ChatList({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 w-7 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+                  className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent rounded-lg"
                 >
                   <Plus className="h-3 w-3" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-white/95 dark:bg-gray-900/95">
+              <DialogContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
                 <DialogHeader>
-                  <DialogTitle>Novo Contato</DialogTitle>
+                  <DialogTitle className="flex items-center space-x-2">
+                    <Plus className="h-5 w-5 text-purple-600" />
+                    <span>Novo Contato</span>
+                  </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleAddContact} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="contact">Número do contato</Label>
+                    <Label htmlFor="contact" className="text-sm font-medium">Número do contato</Label>
                     <Input
                       id="contact"
                       value={newContact.contact}
                       onChange={(e) => setNewContact({ ...newContact, contact: e.target.value })}
                       required
+                      className="border-gray-200 dark:border-gray-700 focus:border-purple-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="contact">Nome do contato</Label>
+                    <Label htmlFor="contact-name" className="text-sm font-medium">Nome do contato</Label>
                     <Input
                       id="contact-name"
                       value={newContact.name}
                       onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
                       required
+                      className="border-gray-200 dark:border-gray-700 focus:border-purple-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="assignedTo">Designar para</Label>
+                    <Label htmlFor="assignedTo" className="text-sm font-medium">Designar para</Label>
                     <Select
                       value={newContact.assignedTo}
                       onValueChange={(v) => setNewContact({ ...newContact, assignedTo: v })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="border-gray-200 dark:border-gray-700">
                         <SelectValue placeholder="Selecione um usuário" />
                       </SelectTrigger>
                       <SelectContent>
@@ -263,34 +272,40 @@ export function ChatList({
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button type="submit" className="w-full">Adicionar</Button>
+                  <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
+                    Adicionar
+                  </Button>
                 </form>
               </DialogContent>
             </Dialog>
 
             {/* Dialog para salvar contato */}
             <Dialog open={isSaveContactDialogOpen} onOpenChange={setIsSaveContactDialogOpen}>
-              <DialogContent>
+              <DialogContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
                 <DialogHeader>
-                  <DialogTitle>Salvar Contato</DialogTitle>
+                  <DialogTitle className="flex items-center space-x-2">
+                    <Save className="h-5 w-5 text-purple-600" />
+                    <span>Salvar Contato</span>
+                  </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={(e) => { e.preventDefault(); handleConfirmSaveContact(); }}>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contactName">Nome do Contato</Label>
+                      <Label htmlFor="contactName" className="text-sm font-medium">Nome do Contato</Label>
                       <Input
                         id="contactName"
                         value={contactToSave.name}
                         onChange={(e) => setContactToSave({ ...contactToSave, name: e.target.value })}
                         placeholder="Digite o nome do contato"
                         required
+                        className="border-gray-200 dark:border-gray-700 focus:border-purple-500"
                       />
                     </div>
                     <div className="flex space-x-2">
                       <Button type="button" variant="outline" onClick={() => setIsSaveContactDialogOpen(false)} className="flex-1">
                         Cancelar
                       </Button>
-                      <Button type="submit" className="flex-1">
+                      <Button type="submit" className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
                         Salvar
                       </Button>
                     </div>
@@ -301,27 +316,31 @@ export function ChatList({
 
             {/* Dialog para editar contato */}
             <Dialog open={isEditContactDialogOpen} onOpenChange={setIsEditContactDialogOpen}>
-              <DialogContent>
+              <DialogContent className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-0 shadow-2xl">
                 <DialogHeader>
-                  <DialogTitle>Editar Contato</DialogTitle>
+                  <DialogTitle className="flex items-center space-x-2">
+                    <Edit className="h-5 w-5 text-purple-600" />
+                    <span>Editar Contato</span>
+                  </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={(e) => { e.preventDefault(); handleConfirmEditContact(); }}>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="editContactName">Nome do Contato</Label>
+                      <Label htmlFor="editContactName" className="text-sm font-medium">Nome do Contato</Label>
                       <Input
                         id="editContactName"
                         value={contactToEdit.name}
                         onChange={(e) => setContactToEdit({ ...contactToEdit, name: e.target.value })}
                         placeholder="Digite o nome do contato"
                         required
+                        className="border-gray-200 dark:border-gray-700 focus:border-purple-500"
                       />
                     </div>
                     <div className="flex space-x-2">
                       <Button type="button" variant="outline" onClick={() => setIsEditContactDialogOpen(false)} className="flex-1">
                         Cancelar
                       </Button>
-                      <Button type="submit" className="flex-1">
+                      <Button type="submit" className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800">
                         Atualizar
                       </Button>
                     </div>
@@ -334,20 +353,20 @@ export function ChatList({
               size="sm"
               onClick={onRefresh}
               disabled={isLoading}
-              className="h-7 w-7 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent"
+              className="h-8 w-8 p-0 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50 bg-transparent rounded-lg"
             >
               <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
             </Button>
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Buscar conversas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8 pl-8 text-sm bg-white/80 dark:bg-gray-800/80 border-purple-200/50 dark:border-purple-800/50 focus:border-purple-400 dark:focus:border-purple-600"
+              className="h-10 pl-10 text-sm bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 rounded-lg"
             />
           </div>
           <div className="flex space-x-1">
@@ -356,12 +375,13 @@ export function ChatList({
               size="sm"
               onClick={() => setAssignmentFilter("all")}
               className={cn(
-                "h-7 px-2 text-xs",
+                "h-8 px-3 text-xs font-medium rounded-lg transition-all duration-200",
                 assignmentFilter === "all"
-                  ? "gradient-purple text-white"
-                  : "border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50",
+                  ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md"
+                  : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800",
               )}
             >
+              <Filter className="h-3 w-3 mr-1" />
               Todas
             </Button>
             <Button
@@ -369,12 +389,13 @@ export function ChatList({
               size="sm"
               onClick={() => setAssignmentFilter("my")}
               className={cn(
-                "h-7 px-2 text-xs",
+                "h-8 px-3 text-xs font-medium rounded-lg transition-all duration-200",
                 assignmentFilter === "my"
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md"
                   : "border-blue-200 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/50",
               )}
             >
+              <User className="h-3 w-3 mr-1" />
               Minhas
             </Button>
             <Button
@@ -382,12 +403,13 @@ export function ChatList({
               size="sm"
               onClick={() => setAssignmentFilter("unassigned")}
               className={cn(
-                "h-7 px-2 text-xs",
+                "h-8 px-3 text-xs font-medium rounded-lg transition-all duration-200",
                 assignmentFilter === "unassigned"
-                  ? "bg-orange-600 hover:bg-orange-700 text-white"
+                  ? "bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-md"
                   : "border-orange-200 hover:bg-orange-50 dark:border-orange-800 dark:hover:bg-orange-950/50",
               )}
             >
+              <MessageCircle className="h-3 w-3 mr-1" />
               IA
             </Button>
           </div>
@@ -396,77 +418,80 @@ export function ChatList({
       <CardContent className="flex-1 p-0 min-h-0">
         <ScrollArea className="h-full scrollbar-thin">
           {filteredChats.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhuma conversa encontrada</p>
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="h-8 w-8 opacity-50" />
+              </div>
+              <p className="text-sm font-medium">Nenhuma conversa encontrada</p>
+              <p className="text-xs mt-1">Tente ajustar os filtros ou adicionar um novo contato</p>
             </div>
           ) : (
-            <div className="space-y-0.5 p-2">
+            <div className="space-y-1 p-3">
               {filteredChats.map((chat) => {
                 const newMessagesCount = unreadChats.get(chat.id)
                 return (
-                                     <div
-                     key={chat.id}
-                     className={cn(
-                       "p-3 cursor-pointer transition-colors border-b last:border-b-0 border-purple-100 dark:border-purple-900/50 relative",
-                       selectedChat?.id === chat.id
-                         ? "bg-purple-50 dark:bg-purple-950/30"
-                         : "hover:bg-purple-50 dark:hover:bg-purple-950/20",
-                       newMessagesCount && newMessagesCount > 0 && "bg-blue-50/50 dark:bg-blue-950/20"
-                     )}
-                     onClick={() => onSelectChat(chat)}
-                   >
-                     {/* Indicador de mensagem não lida */}
-                     {newMessagesCount && newMessagesCount > 0 && (
-                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-sm" />
-                     )}
+                  <div
+                    key={chat.id}
+                    className={cn(
+                      "p-4 cursor-pointer transition-all duration-200 border border-transparent rounded-xl relative group",
+                      selectedChat?.id === chat.id
+                        ? "bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200 dark:border-purple-800 shadow-sm"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700",
+                      newMessagesCount && newMessagesCount > 0 && "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                    )}
+                    onClick={() => onSelectChat(chat)}
+                  >
+                    {/* Indicador de mensagem não lida */}
+                    {newMessagesCount && newMessagesCount > 0 && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-sm" />
+                    )}
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         {chat.profilePicUrl ? (
                           <img
                             src={chat.profilePicUrl || "/placeholder.svg"}
                             alt="Foto de Perfil"
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-12 h-12 rounded-xl object-cover border-2 border-gray-200 dark:border-gray-700"
                             loading="lazy"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                            <User className="h-5 w-5 text-gray-500" />
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
+                            <User className="h-6 w-6 text-white" />
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-2">
                             <p className={cn(
-                              "font-medium text-sm truncate",
+                              "font-semibold text-sm truncate",
                               chat.isSavedContact === false 
                                 ? "text-orange-600 dark:text-orange-400" 
-                                : "text-foreground"
+                                : "text-gray-900 dark:text-gray-100"
                             )}>
                               {chat.contact}
                             </p>
                             {chat.isSavedContact === false && (
-                              <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">
+                              <Badge variant="outline" className="text-xs px-2 py-0 h-5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30">
                                 Não Salvo
                               </Badge>
                             )}
                           </div>
-                          <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{chat.timestamp}</span>
                         </div>
-                                                 <div className="flex items-center justify-between mt-1">
-                           <p className={cn(
-                             "text-xs truncate flex-1",
-                             newMessagesCount && newMessagesCount > 0
-                               ? "text-blue-600 dark:text-blue-400 font-medium"
-                               : "text-muted-foreground"
-                           )}>
-                             {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
-                           </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className={cn(
+                            "text-sm truncate flex-1",
+                            newMessagesCount && newMessagesCount > 0
+                              ? "text-blue-600 dark:text-blue-400 font-semibold"
+                              : "text-gray-600 dark:text-gray-400"
+                          )}>
+                            {typeof chat.lastMessage === "string" ? chat.lastMessage : "[Mídia]"}
+                          </p>
                           {newMessagesCount && newMessagesCount > 0 ? (
                             <Badge
                               variant="destructive"
-                              className="ml-2 flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600"
+                              className="ml-2 flex-shrink-0 text-xs px-2 py-0 h-5 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold"
                             >
                               {newMessagesCount}
                             </Badge>
@@ -474,19 +499,19 @@ export function ChatList({
                             chat.unreadCount > 0 && (
                               <Badge
                                 variant="destructive"
-                                className="ml-2 flex-shrink-0 text-xs px-1.5 py-0 h-4 bg-red-500 hover:bg-red-600"
+                                className="ml-2 flex-shrink-0 text-xs px-2 py-0 h-5 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold"
                               >
                                 {chat.unreadCount}
                               </Badge>
                             )
                           )}
                         </div>
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center space-x-2">
                             {chat.assignedTo && (
                               <Badge
                                 variant="outline"
-                                className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800"
+                                className="text-xs px-2 py-0 h-5 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800 font-medium"
                               >
                                 <User className="h-3 w-3 mr-1" />
                                 {chat.assignedTo}
@@ -495,7 +520,7 @@ export function ChatList({
                             <Badge
                               variant="outline"
                               className={cn(
-                                "text-xs px-2 py-0 h-5",
+                                "text-xs px-2 py-0 h-5 font-medium",
                                 chat.status === "active"
                                   ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800"
                                   : chat.status === "waiting"
@@ -506,7 +531,7 @@ export function ChatList({
                               {chat.status === "active" ? "Ativo" : chat.status === "waiting" ? "Aguardando" : "Finalizado"}
                             </Badge>
                           </div>
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                             {chat.isSavedContact === false && (
                               <Button
                                 variant="ghost"
@@ -515,7 +540,7 @@ export function ChatList({
                                   e.stopPropagation()
                                   handleSaveContact(chat)
                                 }}
-                                className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/50"
+                                className="h-6 w-6 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/50 rounded-md"
                               >
                                 <Save className="h-3 w-3" />
                               </Button>
@@ -528,7 +553,7 @@ export function ChatList({
                                   e.stopPropagation()
                                   handleEditContact(chat)
                                 }}
-                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/50"
+                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/50 rounded-md"
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>
