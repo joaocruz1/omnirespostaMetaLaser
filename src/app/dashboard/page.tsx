@@ -330,6 +330,14 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-foreground">Olá, {user.name}</p>
                 <p className="text-xs text-muted-foreground">Bem-vindo de volta</p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('https://system-porteira.vercel.app/dashboard', '_blank')}
+                className="border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/50 bg-transparent text-green-700 dark:text-green-300"
+              >
+                📦 Sistema de Estoque
+              </Button>
               <ThemeToggle />
               <Button
                 variant="outline"
