@@ -2,10 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { name, email, password, role } = await request.json()
-    const userId = params.id
+    const userId = id
 
     const existingUser = await prisma.user.findUnique({ where: { id: userId } })
     if (!existingUser) {
@@ -44,9 +45,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const userId = params.id
+    const userId = id
 
     await prisma.user.delete({ where: { id: userId } })
 

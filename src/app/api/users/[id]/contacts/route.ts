@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     // Verificar autenticação
     const authHeader = request.headers.get('authorization')
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Token de autenticação necessário" }, { status: 401 })
     }
 
-    const userId = params.id
+    const userId = id
 
     // Verificar se o usuário existe
     const user = await prisma.user.findUnique({

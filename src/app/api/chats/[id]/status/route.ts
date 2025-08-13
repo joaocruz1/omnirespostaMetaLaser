@@ -1,13 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pusherServer } from "@/lib/pusher";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const { unreadCount, status } = await request.json();
-    const chatId = params.id;
+    const chatId = id;
 
     // Verificar se o chat existe
     const existingChat = await prisma.chat.findUnique({
@@ -25,8 +27,23 @@ export async function PUT(
         ...(unreadCount !== undefined && { unreadCount }),
         ...(status !== undefined && { status }),
         timestamp: new Date()
-      }
+      },
+      include: { contact: true }
     });
+
+    // Disparar evento Pusher para notificar o frontend sobre a atualização
+    try {
+      await pusherServer.trigger('chat-updates', 'chat-event', {
+        event: 'chats.update',
+        chatId: chatId,
+        chat: updatedChat,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`Pusher event triggered for chat status update: ${chatId}`);
+    } catch (pusherError) {
+      console.error("Erro ao disparar evento Pusher:", pusherError);
+      // Não falhar a operação se o Pusher falhar
+    }
 
     return NextResponse.json(updatedChat);
   } catch (error) {

@@ -90,6 +90,35 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
   const [isAiEnabled, setIsAiEnabled] = useState(true)
 
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Estado para controlar notificações duplicadas
+  const [lastNotification, setLastNotification] = useState<{ type: string; message: string; timestamp: number } | null>(null)
+  // Estado para controlar transferências automáticas
+  const [lastAutoTransfer, setLastAutoTransfer] = useState<number>(0)
+
+  // Função para mostrar toast evitando duplicatas
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+    const now = Date.now()
+    const last = lastNotification
+    
+    // Evitar notificações duplicadas dentro de 2 segundos
+    if (last && last.type === type && last.message === message && (now - last.timestamp) < 2000) {
+      return
+    }
+    
+    setLastNotification({ type, message, timestamp: now })
+    
+    switch (type) {
+      case 'success':
+        toast.success(message)
+        break
+      case 'error':
+        toast.error(message)
+        break
+      case 'info':
+        toast.info(message)
+        break
+    }
+  }
 
   const resetInactivityTimer = () => {
     if (inactivityTimerRef.current) {
@@ -98,7 +127,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
     if (!isAiEnabled) {
       inactivityTimerRef.current = setTimeout(() => {
         setIsAiEnabled(true)
-        toast.info("Agente IA reativado automaticamente após 30 minutos. Transferindo conversa...")
+        showToast('info', "Agente IA reativado automaticamente após 30 minutos. Transferindo conversa...")
         // Transferir conversa de volta para Agente IA quando reativar automaticamente
         transferChatToAI()
       }, 30 * 60 * 1000) // 30 minutos
@@ -110,7 +139,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
 
     // Verificar se o chat já está atribuído ao usuário atual
     if (chat.assignedTo === user.name) {
-      toast.info("Esta conversa já está atribuída a você")
+      showToast('info', "Esta conversa já está atribuída a você")
       return
     }
 
@@ -125,18 +154,18 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       })
 
       if (response.ok) {
-        toast.success("Conversa transferida para você com sucesso!")
+        showToast('success', "Conversa transferida para você com sucesso!")
         // Atualizar apenas o chat selecionado para evitar recarregar todo o componente
         if (onUpdateSelectedChat) {
           onUpdateSelectedChat()
         }
       } else {
         const error = await response.json()
-        toast.error(error.error || "Erro ao transferir conversa")
+        showToast('error', error.error || "Erro ao transferir conversa")
       }
     } catch (error) {
       console.error("Failed to transfer chat:", error)
-      toast.error("Erro ao transferir conversa")
+      showToast('error', "Erro ao transferir conversa")
     }
   }
 
@@ -159,18 +188,18 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       })
 
       if (response.ok) {
-        toast.success("Conversa transferida para Agente IA com sucesso!")
+        showToast('success', "Conversa transferida para Agente IA com sucesso!")
         // Atualizar apenas o chat selecionado para evitar recarregar todo o componente
         if (onUpdateSelectedChat) {
           onUpdateSelectedChat()
         }
       } else {
         const error = await response.json()
-        toast.error(error.error || "Erro ao transferir conversa para Agente IA")
+        showToast('error', error.error || "Erro ao transferir conversa para Agente IA")
       }
     } catch (error) {
       console.error("Failed to transfer chat to AI:", error)
-      toast.error("Erro ao transferir conversa para Agente IA")
+      showToast('error', "Erro ao transferir conversa para Agente IA")
     }
   }
 
@@ -201,7 +230,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       }
     } catch (error) {
       console.error("Failed to load messages:", error)
-      toast.error("Erro ao carregar mensagens")
+      showToast('error', "Erro ao carregar mensagens")
     } finally {
       setMessagesLoading(false)
     }
@@ -311,6 +340,9 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       setHasMore(true)
       loadMessages(1, false)
       loadUsers()
+      // Limpar estados de controle quando trocar de chat
+      setLastNotification(null)
+      setLastAutoTransfer(0)
       // Manter o foco no textarea quando trocar de chat
       setTimeout(() => {
         textareaRef.current?.focus()
@@ -327,7 +359,14 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       // Isso evita o reload completo da janela
       const newMessage = lastPusherEvent.message
       if (newMessage && newMessage.chatId === chat.id) {
-        setMessages(prev => [...prev, newMessage])
+        // Verificar se a mensagem já existe para evitar duplicatas
+        setMessages(prev => {
+          const messageExists = prev.some(msg => msg.id === newMessage.id)
+          if (messageExists) {
+            return prev
+          }
+          return [...prev, newMessage]
+        })
         setShouldScrollToBottom(true)
       }
     }
@@ -367,7 +406,9 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
     if ((!newMessage.trim() && !file) || !chat || loading) return
 
     // Verificar se o chat está atribuído ao Agente IA e transferir automaticamente
-    if (chat.assignedTo === "Agente IA" && user) {
+    const now = Date.now()
+    if (chat.assignedTo === "Agente IA" && user && (now - lastAutoTransfer) > 5000) {
+      setLastAutoTransfer(now)
       try {
         const response = await fetch(`/api/chats/${chat.id}/transfer`, {
           method: 'POST',
@@ -379,11 +420,12 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
         })
 
         if (response.ok) {
-          notify.aiAction('assumindo')
-          // Atualizar apenas o chat selecionado sem recarregar tudo
-          if (onUpdateSelectedChat) {
-            onUpdateSelectedChat()
-          }
+          // Aguardar um pouco para o evento Pusher ser processado
+          setTimeout(() => {
+            if (onUpdateSelectedChat) {
+              onUpdateSelectedChat()
+            }
+          }, 500)
         } else {
           console.error("Erro ao transferir conversa automaticamente")
         }
@@ -474,7 +516,7 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
       }
     } catch (error) {
       console.error("Failed to send message:", error)
-      toast.error(`Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      showToast('error', `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
       // Em caso de erro, restaurar o texto da mensagem
       setNewMessage(messageText)
@@ -528,14 +570,14 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
           onUpdateSelectedChat()
         }
         
-        toast.success(`Conversa transferida para ${userName}`)
+        showToast('success', `Conversa transferida para ${userName}`)
       } else {
         const errorData = await response.json()
-        toast.error(errorData.error || "Erro ao transferir conversa")
+        showToast('error', errorData.error || "Erro ao transferir conversa")
       }
     } catch (error) {
       console.error("Failed to transfer chat:", error)
-      toast.error("Erro ao transferir conversa")
+      showToast('error', "Erro ao transferir conversa")
     }
   }
 
@@ -558,14 +600,14 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
         }
         
         const statusText = getStatusText(status)
-        toast.success(`Status alterado para ${statusText}`)
+        showToast('success', `Status alterado para ${statusText}`)
       } else {
         const errorData = await response.json()
-        toast.error(errorData.error || "Erro ao atualizar status")
+        showToast('error', errorData.error || "Erro ao atualizar status")
       }
     } catch (error) {
       console.error("Failed to update status:", error)
-      toast.error("Erro ao atualizar status")
+      showToast('error', "Erro ao atualizar status")
     }
   }
 
@@ -725,13 +767,11 @@ export function ChatWindow({ chat, onChatUpdate, onUpdateSelectedChat, lastPushe
                 const next = !isAiEnabled
                 setIsAiEnabled(next)
                 if (next) {
-                  toast.success("Agente IA ativado. Transferindo conversa para Agente IA...")
+                  showToast('success', "Agente IA ativado. Transferindo conversa para Agente IA...")
                   // Transferir conversa de volta para Agente IA quando reativada
                   await transferChatToAI()
                 } else {
-                  toast.info(
-                    "Agente IA desativado. Transferindo conversa para você...",
-                  )
+                  showToast('info', "Agente IA desativado. Transferindo conversa para você...")
                   // Transferir conversa para o usuário logado quando IA for desativada
                   await transferChatToUser()
                 }

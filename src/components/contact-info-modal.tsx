@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,13 +30,29 @@ export function ContactInfoModal({ contact, isOpen, onClose, onUpdate }: Contact
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState("")
   const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
+  // Resetar estado quando o modal abrir
   useEffect(() => {
-    if (contact) {
-      setEditedName(contact.name)
+    if (isOpen && contact) {
+      setEditedName(contact.name || "")
       setIsEditing(false)
+      setLoading(false)
     }
-  }, [contact])
+  }, [isOpen, contact])
+
+  // Focar no input quando entrar em modo de edição
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      // Usar setTimeout para garantir que o DOM foi atualizado
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus()
+          inputRef.current.select()
+        }
+      }, 50)
+    }
+  }, [isEditing])
 
   const handleSave = async () => {
     if (!contact || !editedName.trim()) return
@@ -103,6 +118,29 @@ export function ContactInfoModal({ contact, isOpen, onClose, onUpdate }: Contact
     }
   }
 
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setEditedName(contact?.name || "")
+  }
+
+  const handleStartEdit = () => {
+    setIsEditing(true)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      if (contact?.isSaved) {
+        handleSave()
+      } else {
+        handleSaveNewContact()
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      handleCancelEdit()
+    }
+  }
+
   if (!contact) return null
 
   return (
@@ -150,17 +188,22 @@ export function ContactInfoModal({ contact, isOpen, onClose, onUpdate }: Contact
             {isEditing ? (
               <div className="flex space-x-2">
                 <Input
+                  ref={inputRef}
                   id="name"
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
                   placeholder="Digite o nome do contato"
                   className="flex-1"
+                  onKeyDown={handleKeyDown}
+                  disabled={loading}
+                  autoFocus
                 />
                 <Button
                   size="sm"
                   onClick={contact.isSaved ? handleSave : handleSaveNewContact}
                   disabled={loading || !editedName.trim()}
                   className="px-3"
+                  type="button"
                 >
                   {loading ? (
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -171,11 +214,10 @@ export function ContactInfoModal({ contact, isOpen, onClose, onUpdate }: Contact
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setIsEditing(false)
-                    setEditedName(contact.name)
-                  }}
+                  onClick={handleCancelEdit}
+                  disabled={loading}
                   className="px-3"
+                  type="button"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -186,8 +228,9 @@ export function ContactInfoModal({ contact, isOpen, onClose, onUpdate }: Contact
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsEditing(true)}
-                  className="h-8 w-8 p-0"
+                  onClick={handleStartEdit}
+                  className="h-8 w-8 p-0 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  type="button"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -249,14 +292,18 @@ export function ContactInfoModal({ contact, isOpen, onClose, onUpdate }: Contact
             <Button
               variant="outline"
               onClick={onClose}
+              disabled={loading}
               className="flex-1"
+              type="button"
             >
               Fechar
             </Button>
             {!contact.isSaved && !isEditing && (
               <Button
-                onClick={() => setIsEditing(true)}
+                onClick={handleStartEdit}
+                disabled={loading}
                 className="flex-1"
+                type="button"
               >
                 Salvar Contato
               </Button>

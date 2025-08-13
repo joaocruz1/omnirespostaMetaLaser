@@ -1,10 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { pusherServer } from "@/lib/pusher"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { userId } = await request.json()
-    const chatId = params.id
+    const chatId = id
 
     // Verificar se o chat existe
     const existingChat = await prisma.chat.findUnique({
@@ -15,9 +17,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Chat não encontrado" }, { status: 404 })
     }
 
+    let updatedChat: any
+
     // Se userId for null, transferir para Agente IA
     if (userId === null) {
-      const updatedChat = await prisma.chat.update({
+      updatedChat = await prisma.chat.update({
         where: { id: chatId },
         data: {
           assignedTo: "Agente IA",
@@ -25,37 +29,46 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         },
         include: { contact: true }
       })
+    } else {
+      // Se userId for fornecido, transferir para o usuário específico
+      if (!userId) {
+        return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })
+      }
 
-      return NextResponse.json({ 
-        success: true, 
-        chat: updatedChat 
+      // Buscar o usuário para obter o nome
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true }
+      })
+
+      if (!user) {
+        return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
+      }
+
+      // Atualizar o chat no banco de dados
+      updatedChat = await prisma.chat.update({
+        where: { id: chatId },
+        data: {
+          assignedTo: user.name,
+          userId: userId
+        },
+        include: { contact: true }
       })
     }
 
-    // Se userId for fornecido, transferir para o usuário específico
-    if (!userId) {
-      return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })
+    // Disparar evento Pusher para notificar o frontend sobre a transferência
+    try {
+      await pusherServer.trigger('chat-updates', 'chat-event', {
+        event: 'chats.update',
+        chatId: chatId,
+        chat: updatedChat,
+        timestamp: new Date().toISOString()
+      })
+      console.log(`Pusher event triggered for chat transfer: ${chatId}`)
+    } catch (pusherError) {
+      console.error("Erro ao disparar evento Pusher:", pusherError)
+      // Não falhar a operação se o Pusher falhar
     }
-
-    // Buscar o usuário para obter o nome
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
-
-    // Atualizar o chat no banco de dados
-    const updatedChat = await prisma.chat.update({
-      where: { id: chatId },
-      data: {
-        assignedTo: user.name,
-        userId: userId
-      },
-      include: { contact: true }
-    })
 
     return NextResponse.json({ 
       success: true, 

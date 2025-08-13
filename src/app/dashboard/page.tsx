@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/auth-provider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Pusher from 'pusher-js';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,11 @@ export default function DashboardPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [lastPusherEvent, setLastPusherEvent] = useState<any>(null);
   const [unreadChats, setUnreadChats] = useState<Map<string, number>>(new Map());
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  
+  // Referência para o chat selecionado atual para evitar re-renderizações
+  const selectedChatRef = useRef<Chat | null>(null);
+  selectedChatRef.current = selectedChat;
 
   // --- LÓGICA DO ÍCONE POR TEMA (única mudança funcional) ---
   const { resolvedTheme } = useTheme();
@@ -43,10 +48,34 @@ export default function DashboardPage() {
   useEffect(() => setMounted(true), []);
   const iconSrc = mounted && resolvedTheme === "dark"
     ? "/iconNextWhite.png"
-    : "/iconNextBlack.png";
+    : "/NextIcon.png";
   // ----------------------------------------------------------
 
-  const loadChats = async () => {
+  // Função para atualizar o chat selecionado com dados atualizados
+  const updateSelectedChat = useCallback((updatedChats: Chat[]) => {
+    setSelectedChat(prevSelectedChat => {
+      if (!prevSelectedChat) return prevSelectedChat;
+      
+      const updatedChat = updatedChats.find(chat => chat.id === prevSelectedChat.id);
+      if (!updatedChat) return prevSelectedChat;
+      
+      // Verificar se realmente precisa atualizar usando comparação mais eficiente
+      if (prevSelectedChat.lastMessage === updatedChat.lastMessage &&
+          prevSelectedChat.timestamp === updatedChat.timestamp &&
+          prevSelectedChat.unreadCount === updatedChat.unreadCount &&
+          prevSelectedChat.assignedTo === updatedChat.assignedTo &&
+          prevSelectedChat.status === updatedChat.status) {
+        return prevSelectedChat; // Não atualizar se os dados são os mesmos
+      }
+      
+      return updatedChat;
+    });
+  }, []); // Sem dependências para evitar recriações
+
+  const loadChats = useCallback(async () => {
+    if (isLoadingChats) return; // Evitar chamadas simultâneas
+    
+    setIsLoadingChats(true);
     try {
       const response = await fetch("/api/chats", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -58,13 +87,13 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error("Failed to load chats:", error);
+    } finally {
+      setIsLoadingChats(false);
     }
-  };
+  }, []); // Sem dependências para evitar recriações
 
   // Função para atualizar apenas o chat selecionado sem recarregar toda a lista
-  const updateSelectedChatOnly = async () => {
-    if (!selectedChat) return;
-    
+  const updateSelectedChatOnly = useCallback(async () => {
     try {
       // Buscar apenas o chat específico da lista atual
       const response = await fetch("/api/chats", {
@@ -72,20 +101,47 @@ export default function DashboardPage() {
       });
       if (response.ok) {
         const allChats = await response.json();
-        const updatedChat = allChats.find((chat: Chat) => chat.id === selectedChat.id);
-        if (updatedChat) {
-          setSelectedChat(updatedChat);
-        }
+        // Usar setSelectedChat com uma função para acessar o valor atual
+        setSelectedChat(prevSelectedChat => {
+          if (!prevSelectedChat) return prevSelectedChat;
+          
+          const updatedChat = allChats.find((chat: Chat) => chat.id === prevSelectedChat.id);
+          if (updatedChat) {
+            // Verificar se realmente precisa atualizar
+            if (prevSelectedChat.lastMessage === updatedChat.lastMessage &&
+                prevSelectedChat.timestamp === updatedChat.timestamp &&
+                prevSelectedChat.unreadCount === updatedChat.unreadCount &&
+                prevSelectedChat.assignedTo === updatedChat.assignedTo &&
+                prevSelectedChat.status === updatedChat.status) {
+              return prevSelectedChat; // Não atualizar se os dados são os mesmos
+            }
+            
+            // Também atualizar na lista de chats
+            setChats(prevChats => 
+              prevChats.map(chat => 
+                chat.id === prevSelectedChat.id ? updatedChat : chat
+              )
+            );
+            return updatedChat;
+          }
+          return prevSelectedChat;
+        });
       }
     } catch (error) {
       console.error("Failed to update selected chat:", error);
     }
-  };
+  }, []); // Sem dependências para evitar recriações
 
   // Função para atualizar a última mensagem de um chat específico
   const updateChatLastMessage = useCallback((chatId: string, messageContent: string, timestamp?: string) => {
-    setChats(prevChats => 
-      prevChats.map(chat => 
+    setChats(prevChats => {
+      // Verificar se realmente precisa atualizar
+      const chatToUpdate = prevChats.find(chat => chat.id === chatId);
+      if (chatToUpdate && chatToUpdate.lastMessage === messageContent && chatToUpdate.timestamp === timestamp) {
+        return prevChats; // Não atualizar se a mensagem e timestamp são os mesmos
+      }
+      
+      return prevChats.map(chat => 
         chat.id === chatId 
           ? { 
               ...chat, 
@@ -93,23 +149,19 @@ export default function DashboardPage() {
               timestamp: timestamp || new Date().toLocaleString("pt-BR")
             }
           : chat
-      )
-    );
-  }, []);
-
-  // Função para atualizar o chat selecionado com dados atualizados
-  const updateSelectedChat = useCallback((updatedChats: Chat[]) => {
-    setSelectedChat(prevSelectedChat => {
-      if (prevSelectedChat) {
-        const updatedChat = updatedChats.find(chat => chat.id === prevSelectedChat.id);
-        return updatedChat || prevSelectedChat;
-      }
-      return prevSelectedChat;
+      );
     });
-  }, []);
+  }, []); // Sem dependências para evitar recriações
 
   const handleSelectChat = useCallback((chat: Chat) => {
-    setSelectedChat(chat);
+    // Verificar se o chat selecionado é realmente diferente
+    setSelectedChat(prevSelectedChat => {
+      if (prevSelectedChat?.id === chat.id) {
+        return prevSelectedChat; // Não atualizar se é o mesmo chat
+      }
+      return chat;
+    });
+    
     // Limpar contador de mensagens não lidas quando selecionar o chat
     setUnreadChats(prev => {
       const newMap = new Map(prev);
@@ -117,7 +169,7 @@ export default function DashboardPage() {
       return newMap;
     });
     
-    // Atualizar contador no banco de dados
+    // Atualizar contador no banco de dados apenas se necessário
     if (chat.unreadCount > 0) {
       fetch(`/api/chats/${chat.id}/status`, {
         method: 'PUT',
@@ -130,7 +182,7 @@ export default function DashboardPage() {
         console.error('Erro ao limpar contador de mensagens não lidas:', error);
       });
     }
-  }, []);
+  }, []); // Sem dependências para evitar recriações
 
   useEffect(() => {
     if (!user) {
@@ -167,7 +219,7 @@ export default function DashboardPage() {
         
         updateChatLastMessage(chatId, data.message.content, messageTimestamp);
 
-        if (isIncoming && chatId !== selectedChat?.id) {
+        if (isIncoming && chatId !== selectedChatRef.current?.id) {
           // Atualizar contador de mensagens não lidas
           setUnreadChats(prev => {
             const newMap = new Map(prev);
@@ -193,8 +245,42 @@ export default function DashboardPage() {
       } else if (data.event === 'messages.update') {
         // Para atualizações de status, apenas atualizar o evento
         // A interface será atualizada pelo chat-window
+      } else if (data.event === 'chats.update') {
+        // Para atualizações de chat (transferência, status, etc.), atualizar a lista
+        console.log("Chat update event received:", data);
+        
+        // Atualizar o chat específico na lista
+        if (data.chat) {
+          setChats(prevChats => 
+            prevChats.map(chat => 
+              chat.id === data.chatId 
+                ? { 
+                    ...chat, 
+                    assignedTo: data.chat.assignedTo,
+                    status: data.chat.status,
+                    userId: data.chat.userId
+                  }
+                : chat
+            )
+          );
+          
+          // Se o chat atualizado é o selecionado, atualizar também
+          if (selectedChatRef.current?.id === data.chatId) {
+            setSelectedChat(prev => 
+              prev ? { 
+                ...prev, 
+                assignedTo: data.chat.assignedTo,
+                status: data.chat.status,
+                userId: data.chat.userId
+              } : prev
+            );
+          }
+        } else {
+          // Se não temos dados específicos do chat, recarregar toda a lista
+          loadChats();
+        }
       } else {
-        // Para outros eventos (chats.update, contacts.update, etc.), recarregar a lista
+        // Para outros eventos (contacts.update, etc.), recarregar a lista
         loadChats();
       }
     });
@@ -204,7 +290,7 @@ export default function DashboardPage() {
       channel.unsubscribe();
       pusher.disconnect();
     };
-  }, [user, router, selectedChat?.id, updateChatLastMessage, playNotificationSound]);
+  }, [user, router, updateChatLastMessage, playNotificationSound, loadChats]); // Remover selectedChatRef.current?.id das dependências
 
   if (!user) return null;
 
