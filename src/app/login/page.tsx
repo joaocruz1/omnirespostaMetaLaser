@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { Loader2, Lock, Mail, User, Shield } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useTheme } from "next-themes"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -20,6 +21,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const { login, user } = useAuth()
   const router = useRouter()
+
+  // Lógica do ícone por tema
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const iconSrc = mounted && resolvedTheme === "dark"
+    ? "/iconNextWhite.png"
+    : "/iconNextBlack.png"
 
 
   useEffect(() => {
@@ -61,9 +70,13 @@ export default function LoginPage() {
         <Card className="w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-0 shadow-2xl theme-smooth">
           <CardHeader className="text-center pb-8">
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl flex items-center justify-center shadow-lg">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
+              <Image 
+                src={iconSrc} 
+                alt="OmniResposta Logo" 
+                width={120} 
+                height={120} 
+                className="rounded-xl"
+              />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent mb-2">
               OmniResposta

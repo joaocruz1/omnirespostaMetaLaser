@@ -48,7 +48,7 @@ export default function DashboardPage() {
   useEffect(() => setMounted(true), []);
   const iconSrc = mounted && resolvedTheme === "dark"
     ? "/iconNextWhite.png"
-    : "/NextIcon.png";
+    : "/iconNextBlack.png";
   // ----------------------------------------------------------
 
   // Função para atualizar o chat selecionado com dados atualizados
